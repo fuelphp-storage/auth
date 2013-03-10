@@ -1,0 +1,24 @@
+{
+	"name": "fuelphp/auth",
+	"type": "library",
+	"description": "Framework independent authentication package",
+	"keywords": ["Auth", "Authentication"],
+	"homepage": "https://github.com/fuelphp/amth",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "FuelPHP Development Team",
+			"email": "team@fuelphp.com"
+		}
+	],
+	"require": {
+		"php": ">=5.3.3"
+	},
+	"require-dev": {
+		"mockery/mockery": "0.7.*"
+	},
+	"autoload": {
+		"psr-0": { "FuelPHP\\Auth": "src/" }
+	},
+	"minimum-stability": "dev"
+}
