@@ -3,7 +3,7 @@
 	"type": "library",
 	"description": "Framework independent authentication package",
 	"keywords": ["Auth", "Authentication"],
-	"homepage": "https://github.com/fuelphp/amth",
+	"homepage": "https://github.com/fuelphp/auth",
 	"license": "MIT",
 	"authors": [
 		{
