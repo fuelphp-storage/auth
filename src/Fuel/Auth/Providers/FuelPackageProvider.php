@@ -30,10 +30,6 @@ class FuelPackageProvider extends PackageProvider
 	 */
 	public function initPackage()
 	{
-		/**
-		 * Alias the Auth Facades to global
-		 */
-		$this->dic->resolve('alias')->aliasNamespace('Fuel\Auth\Facades', '');
 	}
 
 	/**

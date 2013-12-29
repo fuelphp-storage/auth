@@ -8,15 +8,17 @@
  * @link       http://fuelphp.com
  */
 
-namespace Fuel\Auth;
+namespace Fuel\Auth\Storage;
+
+use Fuel\Auth\Driver;
 
 /**
- * Auth User driver interface
+ * Auth Storage driver base class
  *
  * @package  Fuel\Auth
  *
  * @since  2.0.0
  */
-interface UserInterface
+abstract class Base extends Driver
 {
 }

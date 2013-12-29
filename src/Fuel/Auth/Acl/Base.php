@@ -8,15 +8,17 @@
  * @link       http://fuelphp.com
  */
 
-namespace Fuel\Auth;
+namespace Fuel\Auth\Acl;
+
+use Fuel\Auth\Driver;
 
 /**
- * Auth Group driver interface
+ * Auth Acl driver base class
  *
  * @package  Fuel\Auth
  *
  * @since  2.0.0
  */
-interface GroupInterface
+abstract class Base extends Driver
 {
 }
