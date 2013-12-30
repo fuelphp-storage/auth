@@ -35,6 +35,26 @@ class Manager
 	);
 
 	/**
+	 * @var  array  supported global methods, with driver and return type
+	 */
+	protected $methods = array(
+		// user drivers
+		'check'       => array('user' => 'bool'),
+		'validate'    => array('user' => 'bool'),
+		'login'       => array('user' => 'bool'),
+		'forceLogin'  => array('user' => 'bool'),
+		'isLoggedIn'  => array('user' => 'bool'),
+		'logout'      => array('user' => 'bool'),
+		'create'      => array('user' => 'array'),
+		'update'      => array('user' => 'array'),
+		'password'    => array('user' => 'array'),
+		'reset'       => array('user' => 'array'),
+		'delete'      => array('user' => 'array'),
+		// group drivers
+		// acl drivers
+	);
+
+	/**
 	 * Class constructor.
 	 *
 	 * @since 2.0.0
@@ -43,6 +63,35 @@ class Manager
 	{
 		// update the default config with whatever was passed
 		$this->config = \Arr::merge($this->config, $config);
+	}
+
+	/**
+	 * Capture calls to driver methods, and distribute them after checking...
+	 *
+	 * @since 2.0.0
+	 */
+	public function __call($name, $args)
+	{
+		if (isset($this->methods[$name]))
+		{
+			$type = key($this->methods[$name]);
+			switch ($this->methods[$name][$type])
+			{
+				case 'array':
+					return $this->returnAsArray($type, $name, $args);
+				break;
+
+				case 'bool':
+					return $this->returnAsBool($type, $name, $args);
+				break;
+
+				default:
+					throw new \ErrorException('Unknown return type "'.$this->methods[$name][$type].'" defined for "Fuel\Auth\Manager::'.$name.'()".');
+			}
+		}
+
+		// we don't know or support this method
+		throw new \ErrorException('Method "Fuel\Auth\Manager::'.$name.'()" does not exist.');
 	}
 
 	/**
@@ -123,106 +172,109 @@ class Manager
 		return func_num_args() ? \Arr::get($this->config, $key, $default) : $this->config;
 	}
 
+	/*--------------------------------------------------------------------------
+	 * User driver methods
+	 *------------------------------------------------------------------------*/
+
 	/**
-	 * Check for a logged-in user. Check uses persistence data to restore
-	 * a logged-in user if needed and supported by the driver
+	 * Get a user data item
+	 *
+	 * @param  string  $key      the field to retrieve
+	 * @param  string  $default  the value to return if not found
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	public function get($key = null, $value = null)
+	{
+		die('TODO: Auth-Manager::get()');
+	}
+
+	/*--------------------------------------------------------------------------
+	 * Group driver methods
+	 *------------------------------------------------------------------------*/
+
+	/*--------------------------------------------------------------------------
+	 * ACL driver methods
+	 *------------------------------------------------------------------------*/
+
+	/*--------------------------------------------------------------------------
+	 * Internal methods
+	 *------------------------------------------------------------------------*/
+
+	/**
+	 * Calls driver methods with a consolidated boolean return value
 	 *
 	 * @return  bool
 	 *
 	 * @since 2.0.0
 	 */
-	public function check()
+	protected function returnAsBool($type, $method, $args)
 	{
-		$loggedin = false;
+		$result = false;
 
-		// loop over the defined user drivers
-		foreach ($this->drivers['user'] as $driver)
+		// loop over the defined drivers
+		foreach ($this->drivers[$type] as $driver)
 		{
-			// attempt a login with this driver
-			if ($driver->isLoggedIn() or $driver->check())
+			// call the driver method
+			try
 			{
-				// mark the success
-				$loggedin = true;
-
-				// if we don't have to try all, bail out now
-				if ($this->getConfig('use_all_drivers', false) === false)
+				if (call_user_func_array(array($driver, $method), $args))
 				{
-					break;
+					// mark the success
+					$result = true;
+
+					// if we don't have to try all, bail out now
+					if ($this->getConfig('use_all_drivers', false) === false)
+					{
+						break;
+					}
 				}
+			}
+			catch (AuthException $e)
+			{
+				$result[$name] = false;
 			}
 		}
 
 		// return the result
-		return $loggedin;
+		return $result;
 	}
 
 	/**
-	 * Login user
+	 * Calls driver methods with per-driver results, as assoc array
 	 *
-	 * @param   string  $user      user identification (name, email, etc...)
-	 * @param   string  $password  the password for this user
-	 *
-	 * @return  bool
+	 * @return  array
 	 *
 	 * @since 2.0.0
 	 */
-	public function login($user = '', $password = '')
+	protected function returnAsArray($type, $method, $args)
 	{
-		$loggedin = false;
+		$result = array();
 
-		// make sure nobody's logged in
-		$this->logout();
-
-		// loop over the defined user drivers
-		foreach ($this->drivers['user'] as $driver)
+		// loop over the defined drivers
+		foreach ($this->drivers[$type] as $name => $driver)
 		{
-			// attempt a login with this driver
-			if ($driver->login($user, $password))
+			// call the driver method
+			try
 			{
-				// mark the success
-				$loggedin = true;
-
-				// if we don't have to try all, bail out now
-				if ($this->getConfig('use_all_drivers', false) === false)
+				if ($result[$name] = call_user_func_array(array($driver, $method), $args))
 				{
-					break;
+					// if we don't have to try all, bail out now
+					if ($this->getConfig('use_all_drivers', false) === false)
+					{
+						break;
+					}
 				}
+			}
+			catch (AuthException $e)
+			{
+				$result[$name] = false;
 			}
 		}
 
 		// return the result
-		return $loggedin;
-	}
-
-	/**
-	 * Logout user
-	 *
-	 * @return  bool
-	 *
-	 * @since 2.0.0
-	 */
-	public function logout()
-	{
-		$loggedout = false;
-
-		// loop over the defined user drivers
-		foreach ($this->drivers['user'] as $driver)
-		{
-			// logout
-			if ($driver->logout())
-			{
-				// mark the success
-				$loggedout = true;
-
-				// if we don't have to try all, bail out now
-				if ($this->getConfig('use_all_drivers', false) === false)
-				{
-					break;
-				}
-			}
-		}
-
-		// return the result
-		return $loggedout;
+		return $result;
 	}
 }

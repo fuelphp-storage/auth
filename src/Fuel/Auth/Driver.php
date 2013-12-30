@@ -10,6 +10,8 @@
 
 namespace Fuel\Auth;
 
+use Fuel\Auth\AuthException;
+
 /**
  * Auth base driver class.
  *
@@ -26,6 +28,16 @@ abstract class Driver
 	 * @var  Manager  this drivers manager instance
 	 */
 	protected $manager;
+
+	/**
+	 * @var  bool  Whether or not this driver allows updates
+	 */
+	protected $readOnly = false;
+
+	/**
+	 * @var  bool  Whether or not this driver has guest support
+	 */
+	protected $guestSupport = false;
 
 	/**
 	 * Set this drivers manager instance
@@ -49,4 +61,29 @@ abstract class Driver
 	{
 		return func_num_args() ? \Arr::get($this->config, $key, $default) : $this->config;
 	}
+
+	/**
+	 * get the readonly status of this driver
+	 *
+	 * @return  bool
+	 *
+	 * @since 2.0.0
+	 */
+	public function isReadOnly()
+	{
+		return $this->readOnly;
+	}
+
+	/**
+	 * Check if this driver has guest support
+	 *
+	 * @return  bool
+	 *
+	 * @since 2.0.0
+	 */
+	public function hasGuestSupport()
+	{
+		return $this->guestSupport;
+	}
+
 }
