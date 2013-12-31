@@ -35,16 +35,57 @@ abstract class Driver
 	protected $readOnly = false;
 
 	/**
-	 * @var  bool  Whether or not this driver has guest support
+	 * @var  array  supported global methods, with driver and return type
 	 */
-	protected $guestSupport = false;
+	protected $methods = array();
+
+	/**
+	 * @var  string  driver type
+	 */
+	protected $type = 'undefined';
 
 	/**
 	 * Set this drivers manager instance
+	 *
+	 * @since 2.0.0
 	 */
 	public function setManager(Manager $manager)
 	{
 		$this->manager = $manager;
+	}
+
+	/**
+	 * Return the list of global methods this driver supports.
+	 *
+	 * This list is an array with elements:
+	 * 'methodname' => array('drivertype', 'returnvalue'),
+	 *
+	 * and should be defined in the drivers base class, since it MUST be the
+	 * same list for all drivers of the given type!
+	 *
+	 * @return  array
+	 *
+	 * @since 2.0.0
+	 */
+	public function getMethods()
+	{
+		return $this->methods;
+	}
+
+	/**
+	 * Return the driver type.
+	 *
+	 * This is to ensure that nobody is trying to add a driver of type A as
+	 * type B, which would make a mess. The type should be defined in the
+	 * base class for the given type.
+	 *
+	 * @return  array
+	 *
+	 * @since 2.0.0
+	 */
+	public function getType()
+	{
+		return $this->type;
 	}
 
 	/**
@@ -73,17 +114,4 @@ abstract class Driver
 	{
 		return $this->readOnly;
 	}
-
-	/**
-	 * Check if this driver has guest support
-	 *
-	 * @return  bool
-	 *
-	 * @since 2.0.0
-	 */
-	public function hasGuestSupport()
-	{
-		return $this->guestSupport;
-	}
-
 }

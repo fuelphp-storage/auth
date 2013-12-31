@@ -21,4 +21,17 @@ use Fuel\Auth\Driver;
  */
 abstract class Base extends Driver
 {
+	/**
+	 * @var  string  type for drivers extending this base class
+	 */
+	protected $type = 'acl';
+
+	/**
+	 * @var  array  global methods, supported by all acl drivers
+	 *
+	 * for every method listed, there MUST be an abstract method definition
+	 * in this base class, to ensure the driver implements it!
+	 */
+	protected $methods = array(
+	);
 }

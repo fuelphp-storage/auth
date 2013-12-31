@@ -10,14 +10,18 @@
 
 namespace Fuel\Auth\User;
 
+use Fuel\Auth\AuthException;
+
 /**
- * Dummy user authentication driver, for test purposes
+ * Config based user authentication driver
+ *
+ * This driver stores all it's data in a fuel configuration file
  *
  * @package  Fuel\Auth
  *
  * @since  2.0.0
  */
-class Dummy extends Base
+class Config extends Base
 {
 	/**
 	 * @var  bool  This is a read/write driver
@@ -32,7 +36,9 @@ class Dummy extends Base
 	/**
 	 * @var  array  default driver configuration
 	 */
-	protected $config = array();
+	protected $config = array(
+		'configFile' => 'auth-users',
+	);
 
 	/**
 	 * @var  int  When logged in, the id of the current user
@@ -46,6 +52,7 @@ class Dummy extends Base
 		'userid'   => 0,
 		'groupid'  => 0,
 		'username' => 'Guest',
+		'salt'     => '-not-used-',
 		'password' => '-not-used-',
 		'fullname' => 'Guest User',
 		'email'    => 'guest@example.org',
@@ -55,14 +62,6 @@ class Dummy extends Base
 	 * @var  array  dummy user data
 	 */
 	protected $data = array(
-		1 => array(
-			'userid'   => 1,
-			'groupid'  => 1,
-			'username' => 'Dummy',
-			'password' => 'Password',
-			'fullname' => 'Dummy User',
-			'email'    => 'dummy@example.org',
-		),
 	);
 
 	/**
@@ -70,6 +69,12 @@ class Dummy extends Base
 	 */
 	public function __construct(array $config = array())
 	{
+		// load the auth user config
+		if (is_file($config['config_file']))
+		{
+			$this->data = include $config['config_file'];
+		}
+
 		// update the default config with whatever was passed
 		$this->config = \Arr::merge($this->config, $config);
 	}
@@ -110,9 +115,13 @@ class Dummy extends Base
 	{
 		foreach ($this->data as $id => $data)
 		{
-			if ($data['username'] == $user and $data['password'] == $password)
+			if ($data['username'] == $user)
 			{
-				return $id;
+				$password = $this->hash($password, $data['salt']);
+				if ($data['password'] == $password)
+				{
+					return $id;
+				}
 			}
 		}
 
@@ -221,7 +230,7 @@ class Dummy extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function get($key = null, $value = null)
+	public function get($key = null, $default = null)
 	{
 		if ($this->isLoggedIn())
 		{
@@ -236,6 +245,26 @@ class Dummy extends Base
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get user data
+	 *
+	 * @param  string  $username  name of the user who's data should be retrieved
+	 * @param  string  $key       the field to retrieve
+	 * @param  string  $default   the value to return if not found
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	public function getUser($username, $key = null, $default = null)
+	{
+		// get the id of the user who's information we want
+		$id = $this->findId($username);
+
+		// return either the requested value or all data
+		return func_num_args() > 1 ? \Arr::get($this->data[$id], $key, $default) : $this->data[$id];
 	}
 
 	/**
@@ -266,19 +295,20 @@ class Dummy extends Base
 			}
 		}
 
-		// create a new user
-		$this->data[] = array();
-
 		// get it's id
-		$id = end($this->data);
+		$id = empty($this->data) ? 1 : end($this->data);
 
 		// add it to the attributes
 		$attributes['userid'] = $id;
 		$attributes['username'] = $username;
-		$attributes['password'] = $password;
+		$attributes['salt'] = $this->salt(32);
+		$attributes['password'] = $this->hash($password, $attributes['salt']);
 
 		// store it
 		$this->data[$id] = $attributes;
+
+		// write the data
+		$this->store();
 
 		return $id;
 	}
@@ -311,13 +341,16 @@ class Dummy extends Base
 		$id = $this->findId($username);
 
 		// validate the password if needed
-		if ($password and $password != $this->data[$id]['password'])
+		if ($password and $this->hash($password, $this->data[$id]['salt']) != $this->data[$id]['password'])
 		{
 			throw new AuthException('Update failed. The given password does not match the account password.');
 		}
 
 		// update the user
 		$this->data[$id] = \Arr::merge($this->data[$id], $attributes);
+
+		// write the update
+		$this->store();
 
 		return true;
 	}
@@ -348,7 +381,7 @@ class Dummy extends Base
 		$id = $this->findId($username);
 
 		// validate the current password if needed
-		if ($currentPassword and $currentPassword != $this->data[$id]['password'])
+		if ($currentPassword and $this->hash($currentPassword, $this->data[$id]['salt']) != $this->data[$id]['password'])
 		{
 			throw new AuthException('Password update failed. The given password does not match the account password.');
 		}
@@ -360,8 +393,12 @@ class Dummy extends Base
 			throw new AuthException('Password update failed. The new password does not validate.');
 		}
 
-		// update the user
-		$this->data[$id]['password'] = $password;
+		// generate a new salt, and a hash the new password
+		$this->data[$id]['salt'] = $this->salt(32);
+		$this->data[$id]['password'] = $this->hash($password, $this->data[$id]['salt']);
+
+		// write the update
+		$this->store();
 
 		return true;
 	}
@@ -386,8 +423,18 @@ class Dummy extends Base
 		// get the id of the user we're updating
 		$id = $this->findId($username);
 
+		// generate a unique password
+		$password = $this->randomString(8);
+
+		// generate a new salt, and a hash the new password
+		$this->data[$id]['salt'] = $this->salt(32);
+		$this->data[$id]['password'] = $this->hash($password, $this->data[$id]['salt']);
+
+		// write the update
+		$this->store();
+
 		// assign a new password and return it
-		return $this->data[$id]['password'] = uniqid();
+		return $password;
 	}
 
 	/**
@@ -411,11 +458,21 @@ class Dummy extends Base
 		// delete the user
 		unset($this->data[$id]);
 
+		// check the persistence store to see if this user is stored
+		$persistence = $this->manager->getDriver('persistence');
+		if ($persistence and $id == $persistence->get('user'))
+		{
+			$persistence->delete('user');
+		}
+
 		// if this was the current user, force a logout
 		if ($id === $this->currentUser)
 		{
 			$this->logout();
 		}
+
+		// update the stored data
+		$this->store();
 
 		return true;
 	}
@@ -446,12 +503,41 @@ class Dummy extends Base
 					break;
 				}
 			}
-			if (isset($id) and $this->data[$id]['username'] != $username)
+			if ( ! isset($id))
+			{
+				throw new AuthException('There are no users defined.');
+			}
+			elseif ($this->data[$id]['username'] != $username)
 			{
 				throw new AuthException('You can not reset the password of "'.$username.'". This account does not exist.');
 			}
 		}
 
 		return $id;
+	}
+
+	/**
+	 *
+	 */
+	protected function store()
+	{
+		// open the file
+		$handle = fopen($this->config['config_file'], 'c');
+		if ($handle)
+		{
+			// lock the file, and truncate it
+			flock($handle, LOCK_EX);
+			ftruncate($handle, 0);
+
+			fwrite($handle, '<?php'.PHP_EOL.'return '.var_export($this->data, true).';'.PHP_EOL);
+
+			// release the lock, and close it
+			flock($handle, LOCK_UN);
+			fclose($handle);
+		}
+		else
+		{
+			throw new AuthException('Can not open "'.$this->config['config_file'].'" for write');
+		}
 	}
 }

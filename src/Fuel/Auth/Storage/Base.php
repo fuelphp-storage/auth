@@ -21,4 +21,13 @@ use Fuel\Auth\Driver;
  */
 abstract class Base extends Driver
 {
+	/**
+	 * @var  string  type for drivers extending this base class
+	 */
+	protected $type = 'storage';
+
+	/**
+	 * @var  array  empty array, storage drivers don't have global methods
+	 */
+	protected $methods = array();
 }

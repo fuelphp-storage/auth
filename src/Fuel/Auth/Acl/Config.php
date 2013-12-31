@@ -8,16 +8,18 @@
  * @link       http://fuelphp.com
  */
 
-namespace Fuel\Auth\Group;
+namespace Fuel\Auth\Acl;
 
 /**
- * Dummy group authentication driver, for test purposes
+ * Config based acl authentication driver
+ *
+ * This driver stores all it's data in a fuel configuration file
  *
  * @package  Fuel\Auth
  *
  * @since  2.0.0
  */
-class Dummy extends Base
+class Config extends Base
 {
 	/**
 	 * @var  array  default driver configuration
@@ -27,8 +29,11 @@ class Dummy extends Base
 	/**
 	 *
 	 */
-	public function __construct(array $config = array())
+	public function __construct($configInstance, array $config = array())
 	{
+		// store the config instance
+		$this->configInstance = $configInstance;
+
 		// update the default config with whatever was passed
 		$this->config = \Arr::merge($this->config, $config);
 	}

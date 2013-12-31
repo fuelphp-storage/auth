@@ -27,32 +27,17 @@ class Manager
 	/**
 	 * @var  array  loaded auth drivers
 	 */
-	protected $drivers = array(
-		'storage' => array(),
-		'user' => array(),
-		'group' => array(),
-		'acl' => array(),
-	);
+	protected $drivers = array();
 
 	/**
 	 * @var  array  supported global methods, with driver and return type
 	 */
-	protected $methods = array(
-		// user drivers
-		'check'       => array('user' => 'bool'),
-		'validate'    => array('user' => 'bool'),
-		'login'       => array('user' => 'bool'),
-		'forceLogin'  => array('user' => 'bool'),
-		'isLoggedIn'  => array('user' => 'bool'),
-		'logout'      => array('user' => 'bool'),
-		'create'      => array('user' => 'array'),
-		'update'      => array('user' => 'array'),
-		'password'    => array('user' => 'array'),
-		'reset'       => array('user' => 'array'),
-		'delete'      => array('user' => 'array'),
-		// group drivers
-		// acl drivers
-	);
+	protected $methods = array();
+
+	/**
+	 * @var  array  errors picked up in the last driver call
+	 */
+	protected $lastErrors = array();
 
 	/**
 	 * Class constructor.
@@ -74,7 +59,13 @@ class Manager
 	{
 		if (isset($this->methods[$name]))
 		{
+			// reset the last error array
+			$this->lastErrors = array();
+
+			// get the driver type
 			$type = key($this->methods[$name]);
+
+			// and process the call
 			switch ($this->methods[$name][$type])
 			{
 				case 'array':
@@ -106,14 +97,21 @@ class Manager
 	public function addDriver($type, $name, Driver $driver)
 	{
 		// make sure it's the correct driver for this type
-		$base = 'Fuel\\Auth\\'.ucfirst($type).'\\Base';
-		if ( ! $driver instanceOf $base)
+		if (($driverType = $driver->getType()) != $type)
 		{
-			throw new AuthException('Auth "'.$type.'.'.$name.'" driver does not extend "'.$base.'"');
+			throw new AuthException('Auth driver error: "'.$name.'" is a "'.$driverType.'" instead of a "'.$type.'" driver.');
 		}
 
 		// link this driver to it's manager
 		$driver->setManager($this);
+
+		// is this the first driver loaded for this type?
+		if ( ! isset($this->drivers[$type]))
+		{
+			// import any global methods from the driver
+			$this->drivers[$type] = array();
+			$this->methods = \Arr::merge($this->methods, $driver->getMethods());
+		}
 
 		// store the driver
 		$this->drivers[$type][$name] = $driver;
@@ -172,24 +170,21 @@ class Manager
 		return func_num_args() ? \Arr::get($this->config, $key, $default) : $this->config;
 	}
 
-	/*--------------------------------------------------------------------------
-	 * User driver methods
-	 *------------------------------------------------------------------------*/
-
 	/**
-	 * Get a user data item
+	 * Return the errors detected in the last driver call
 	 *
-	 * @param  string  $key      the field to retrieve
-	 * @param  string  $default  the value to return if not found
-	 *
-	 * @return  mixed
+	 * @return  array
 	 *
 	 * @since 2.0.0
 	 */
-	public function get($key = null, $value = null)
+	public function lastErrors()
 	{
-		die('TODO: Auth-Manager::get()');
+		return $this->lastErrors;
 	}
+
+	/*--------------------------------------------------------------------------
+	 * User driver methods
+	 *------------------------------------------------------------------------*/
 
 	/*--------------------------------------------------------------------------
 	 * Group driver methods
@@ -270,6 +265,10 @@ class Manager
 			}
 			catch (AuthException $e)
 			{
+				// store the exception
+				$this->lastErrors[$name] = $e;
+
+				// and reset the result
 				$result[$name] = false;
 			}
 		}

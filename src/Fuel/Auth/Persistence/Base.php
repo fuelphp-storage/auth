@@ -22,6 +22,16 @@ use Fuel\Auth\Driver;
 abstract class Base extends Driver
 {
 	/**
+	 * @var  string  type for drivers extending this base class
+	 */
+	protected $type = 'persistence';
+
+	/**
+	 * @var  array  empty array, persistence drivers don't have global methods
+	 */
+	protected $methods = array();
+
+	/**
 	 * get a value from persistent storage
 	 *
 	 * @param  string  $key  key of the value to get

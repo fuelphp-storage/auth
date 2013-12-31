@@ -106,7 +106,7 @@ class FuelServiceProvider extends ServiceProvider
 		// \Fuel\Auth\Persistence\Session
 		$this->register('auth.persistence.session', function ($dic, array $config = array())
 		{
-			// get the auth config
+			// get the current application object
 			$stack = $this->container->resolve('requeststack');
 			if ($request = $stack->top())
 			{
@@ -134,30 +134,99 @@ class FuelServiceProvider extends ServiceProvider
 		 * Auth user drivers
 		 */
 
-		// \Fuel\Auth\User\Dummy
-		$this->register('auth.user.dummy', function ($dic, array $config = array())
+		// \Fuel\Auth\User\Config
+		$this->register('auth.user.config', function ($dic, array $config = array())
 		{
-			return $dic->resolve('Fuel\Auth\User\Dummy', array($config));
+			// make sure we have a config filename
+			if ( ! isset($config['config_file']))
+			{
+				$config['config_file'] = 'auth-users';
+			}
+
+			// was a full path specified?
+			if (strpos($config['config_file'], DIRECTORY_SEPARATOR) === false)
+			{
+				// get the current application object
+				$stack = $this->container->resolve('requeststack');
+				if ($request = $stack->top())
+				{
+					$app = $request->getApplication();
+				}
+				else
+				{
+					$app = $this->container->resolve('application.main');
+				}
+
+				$config['config_file'] = $app->getPath().'config'.DIRECTORY_SEPARATOR.$config['config_file'].'.php';
+			}
+
+			return $dic->resolve('Fuel\Auth\User\Config', array($config));
 		});
 
 		/**
 		 * Auth group drivers
 		 */
 
-		// \Fuel\Auth\Group\Dummy
-		$this->register('auth.group.dummy', function ($dic, array $config = array())
+		// \Fuel\Auth\Group\Config
+		$this->register('auth.group.config', function ($dic, array $config = array())
 		{
-			return $dic->resolve('Fuel\Auth\Group\Dummy', array($config));
+			// make sure we have a config filename
+			if ( ! isset($config['config_file']))
+			{
+				$config['config_file'] = 'auth-groups';
+			}
+
+			// was a full path specified?
+			if (strpos($config['config_file'], DIRECTORY_SEPARATOR) === false)
+			{
+				// get the current application object
+				$stack = $this->container->resolve('requeststack');
+				if ($request = $stack->top())
+				{
+					$app = $request->getApplication();
+				}
+				else
+				{
+					$app = $this->container->resolve('application.main');
+				}
+
+				$config['config_file'] = $app->getPath().'config'.DIRECTORY_SEPARATOR.$config['config_file'].'.php';
+			}
+
+			return $dic->resolve('Fuel\Auth\Group\Config', array($config));
 		});
 
 		/**
 		 * Auth acl drivers
 		 */
 
-		// \Fuel\Auth\Acl\Dummy
-		$this->register('auth.acl.dummy', function ($dic, array $config = array())
+		// \Fuel\Auth\Acl\Config
+		$this->register('auth.acl.config', function ($dic, array $config = array())
 		{
-			return $dic->resolve('Fuel\Auth\Acl\Dummy', array($config));
+			// make sure we have a config filename
+			if ( ! isset($config['config_file']))
+			{
+				$config['config_file'] = 'auth-acls';
+			}
+
+			// was a full path specified?
+			if (strpos($config['config_file'], DIRECTORY_SEPARATOR) === false)
+			{
+				// get the current application object
+				$stack = $this->container->resolve('requeststack');
+				if ($request = $stack->top())
+				{
+					$app = $request->getApplication();
+				}
+				else
+				{
+					$app = $this->container->resolve('application.main');
+				}
+
+				$config['config_file'] = $app->getPath().'config'.DIRECTORY_SEPARATOR.$config['config_file'].'.php';
+			}
+
+			return $dic->resolve('Fuel\Auth\Acl\Config', array($config));
 		});
 	}
 }

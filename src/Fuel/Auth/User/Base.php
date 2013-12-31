@@ -23,9 +23,57 @@ use Fuel\Auth\Hasher;
 abstract class Base extends Driver
 {
 	/**
+	 * @var  string  type for drivers extending this base class
+	 */
+	protected $type = 'user';
+
+	/**
+	 * @var  array  global methods, supported by all user drivers
+	 *
+	 * This list is an array with elements:
+	 * 'methodname' => array('drivertype', 'returnvalue'),
+	 *
+	 * for every method listed, there MUST be an method definition
+	 * in this base class, to ensure the driver implements it!
+	 */
+	protected $methods = array(
+		'hasGuestSupport'  => array('user' => 'bool'),
+		'check'            => array('user' => 'bool'),
+		'validate'         => array('user' => 'bool'),
+		'login'            => array('user' => 'bool'),
+		'forceLogin'       => array('user' => 'array'),
+		'isLoggedIn'       => array('user' => 'bool'),
+		'logout'           => array('user' => 'bool'),
+		'create'           => array('user' => 'array'),
+		'update'           => array('user' => 'array'),
+		'password'         => array('user' => 'array'),
+		'reset'            => array('user' => 'array'),
+		'delete'           => array('user' => 'array'),
+		'get'              => array('user' => 'array'),
+		'getUser'          => array('user' => 'array'),
+	);
+
+	/**
+	 * @var  bool  Whether or not this driver has guest support
+	 */
+	protected $guestSupport = false;
+
+	/**
 	 * @var  PHPSecLib\Crypt_Hash  used to create password hashes
 	 */
 	protected $hasher;
+
+	/**
+	 * Check if this driver has guest support
+	 *
+	 * @return  bool
+	 *
+	 * @since 2.0.0
+	 */
+	public function hasGuestSupport()
+	{
+		return $this->guestSupport;
+	}
 
 	/**
 	 * Returns the hash object and creates it if necessary
@@ -48,23 +96,69 @@ abstract class Base extends Driver
 	 * Default password hash method
 	 *
 	 * @param   string  the string to hash
+	 * @param   string  the salt to use
 	 * @param   string  hash method to use
 	 *
 	 * @return  string  the hashed string, base64 encoded
 	 *
 	 * @since 1.0.0
 	 */
-	public function hash($password, $method = 'pbkdf2')
+	public function hash($password, $salt = null, $method = 'pbkdf2')
 	{
 		switch ($method)
 		{
+			case 'bcrypt':
+				$hash = base64_encode($this->hasher()->bcrypt($password, $salt ?: $this->manager->getConfig('salt', '')));
+			break;
+
+			case 'crypt':
+				$hash = base64_encode($this->hasher()->crypt($password, $salt ?: $this->manager->getConfig('salt', '')));
+			break;
+
 			case 'pbkdf2':
 			default:
-				$hash = base64_encode($this->hasher()->pbkdf2($password, $this->manager->getConfig('salt', ''), $this->manager->getConfig('iterations', 10000), 32));
+				$hash = base64_encode($this->hasher()->pbkdf2($password, $salt ?: $this->manager->getConfig('salt', ''), $this->manager->getConfig('iterations', 10000), 32));
 		}
 
 		return $hash;
 	}
+
+	/**
+	 *  Generate a very random salt
+	 *
+	 *  @param  int  $length  required length of the salt string
+	 *
+	 *  @return  string  generated random salt
+	 */
+	public function salt($length)
+	{
+		return $this->hasher()->salt($length);
+	}
+
+	/**
+	 *  Generate a quick random user readable string
+	 *
+	 *  @param  int  $length  required length of the string
+	 *
+	 *  @return  string  generated random string
+	 */
+	public function randomString($length)
+	{
+		// allowed characters
+		static $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+		// make sure we have enough length
+		while (strlen($chars) < $length)
+		{
+			$chars .= $chars;
+		}
+
+		return substr(str_shuffle($chars),0,$length);
+	}
+
+	/*--------------------------------------------------------------------------
+	 * User driver methods
+	 *------------------------------------------------------------------------*/
 
 	/**
 	 * Check for a logged-in user. Check uses persistence data to restore
@@ -142,7 +236,20 @@ abstract class Base extends Driver
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function get($key = null, $value = null);
+	abstract public function get($key = null, $default = null);
+
+	/**
+	 * Get user data
+	 *
+	 * @param  string  $username  name of the user who's data should be retrieved
+	 * @param  string  $key       the field to retrieve
+	 * @param  string  $default   the value to return if not found
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	abstract public function getUser($username, $key = null, $default = null);
 
 	/**
 	 * Create new user
