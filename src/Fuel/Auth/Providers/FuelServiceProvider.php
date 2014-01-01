@@ -28,7 +28,7 @@ class FuelServiceProvider extends ServiceProvider
 	public $provides = array(
 		'auth',
 		'auth.storage.db',
-		'auth.user.dummy', 'auth.group.dummy', 'auth.acl.dummy',
+		'auth.user.config', 'auth.group.config', 'auth.acl.config',
 	);
 
 	/**
@@ -160,7 +160,7 @@ class FuelServiceProvider extends ServiceProvider
 				$config['config_file'] = $app->getPath().'config'.DIRECTORY_SEPARATOR.$config['config_file'].'.php';
 			}
 
-			return $dic->resolve('Fuel\Auth\User\Config', array($config));
+			return $dic->resolve('Fuel\Auth\User\Config', array($config, $app->getInput()));
 		});
 
 		/**

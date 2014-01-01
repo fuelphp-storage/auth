@@ -11,6 +11,7 @@
 namespace Fuel\Auth\User;
 
 use Fuel\Auth\AuthException;
+use Fuel\Foundation\Input;
 
 /**
  * Config based user authentication driver
@@ -38,6 +39,8 @@ class Config extends Base
 	 */
 	protected $config = array(
 		'configFile' => 'auth-users',
+		'username_post_key' => 'username',
+		'password_post_key' => 'password',
 	);
 
 	/**
@@ -46,11 +49,11 @@ class Config extends Base
 	protected $currentUser;
 
 	/**
-	 * @var  array  dummy guest data
+	 * @var  array  guest data
 	 */
 	protected $guest = array(
-		'userid'   => 0,
-		'groupid'  => 0,
+		'id'       => 0,
+		'group'    => 0,
 		'username' => 'Guest',
 		'salt'     => '-not-used-',
 		'password' => '-not-used-',
@@ -59,7 +62,7 @@ class Config extends Base
 	);
 
 	/**
-	 * @var  array  dummy user data
+	 * @var  array  loaded user data
 	 */
 	protected $data = array(
 	);
@@ -67,23 +70,27 @@ class Config extends Base
 	/**
 	 *
 	 */
-	public function __construct(array $config = array())
+	public function __construct(array $config = array(), Input $input)
 	{
-		// load the auth user config
-		if (is_file($config['config_file']))
-		{
-			$this->data = include $config['config_file'];
-		}
+		parent::__construct($config, $input);
 
-		// update the default config with whatever was passed
-		$this->config = \Arr::merge($this->config, $config);
+		// load the auth user config
+		if (is_file($file = $this->getConfig('config_file', null)))
+		{
+			$this->data = include $file;
+		}
+		else
+		{
+			// attempt to create it
+			$this->store();
+		}
 	}
 
 	/**
 	 * Check for a logged-in user. Check uses persistence data to restore
 	 * a logged-in user if needed and supported by the driver
 	 *
-	 * @return  bool
+	 * @return  bool  true if there is a logged-in user, false if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -92,10 +99,12 @@ class Config extends Base
 		if ( ! $this->isLoggedIn())
 		{
 			 $persistence = $this->manager->getDriver('persistence');
-			 if ( ! $persistence or ($this->currentUser = $persistence->get('user')) === null)
+			 if ($persistence and ($this->currentUser = $persistence->get('user')) !== null)
 			 {
-				return false;
+				return true;
 			 }
+
+			 return false;
 		}
 
 		return true;
@@ -107,7 +116,7 @@ class Config extends Base
 	 * @param   string  $user      user identification (name, email, etc...)
 	 * @param   string  $password  the password for this user
 	 *
-	 * @return  mixed  the id of the user if validated, or false if not
+	 * @return  int|false  the id of the user if validated, or false if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -134,12 +143,16 @@ class Config extends Base
 	 * @param   string  $user      user identification (name, email, etc...)
 	 * @param   string  $password  the password for this user
 	 *
-	 * @return  bool
+	 * @return  bool  true on a successful login, false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	public function login($user, $password)
+	public function login($user = null, $password = null)
 	{
+		// if we don't have a user or password, check if it was posted
+		$user = $user === null ? $this->input->getParam($this->config['username_post_key'], null) : $user;
+		$password = $password === null ? $this->input->getParam($this->config['password_post_key'], null) : $password;
+
 		// log the user in when it validates
 		if ($id = $this->validate($user, $password))
 		{
@@ -166,7 +179,7 @@ class Config extends Base
 	 *
 	 * @param   string  $id  id of the user for which we need to force a login
 	 *
-	 * @return  bool
+	 * @return  bool  true on a successful login, false if it failed
 	 *
 	 * @since 2.0.0
 	 */
@@ -174,7 +187,7 @@ class Config extends Base
 	{
 		if (isset($this->data[$id]))
 		{
-			$this->currentUser = $this->data[$id]['userid'];
+			$this->currentUser = $this->data[$id]['id'];
 
 			if ($persistence =$this->manager->getDriver('persistence'))
 			{
@@ -189,7 +202,7 @@ class Config extends Base
 	/**
 	 * Check if this driver is logged in or not
 	 *
-	 * @return  bool
+	 * @return  bool  true if there is a logged-in user, false if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -201,7 +214,7 @@ class Config extends Base
 	/**
 	 * Logout user
 	 *
-	 * @return  bool
+	 * @return  bool|null  true if the logout was succesful, null if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -210,7 +223,7 @@ class Config extends Base
 		if ($this->isLoggedIn())
 		{
 			$this->currentUser = $this->getConfig('guest_account', false) ? 0 : null;
-			if ($persistence =$this->manager->getDriver('persistence'))
+			if ($persistence = $this->manager->getDriver('persistence'))
 			{
 				$persistence->delete('user');
 			}
@@ -225,6 +238,8 @@ class Config extends Base
 	 *
 	 * @param  string  $key      the field to retrieve
 	 * @param  string  $default  the value to return if not found
+	 *
+	 * @throws  AuthException  if no user is logged-in
 	 *
 	 * @return  mixed
 	 *
@@ -244,7 +259,7 @@ class Config extends Base
 			}
 		}
 
-		return null;
+		throw new AuthException('Can not get user data. There is no user logged-in');
 	}
 
 	/**
@@ -299,7 +314,7 @@ class Config extends Base
 		$id = empty($this->data) ? 1 : end($this->data);
 
 		// add it to the attributes
-		$attributes['userid'] = $id;
+		$attributes['id'] = $id;
 		$attributes['username'] = $username;
 		$attributes['salt'] = $this->salt(32);
 		$attributes['password'] = $this->hash($password, $attributes['salt']);
@@ -521,23 +536,26 @@ class Config extends Base
 	 */
 	protected function store()
 	{
-		// open the file
-		$handle = fopen($this->config['config_file'], 'c');
-		if ($handle)
+		if ( ! $this->readOnly)
 		{
-			// lock the file, and truncate it
-			flock($handle, LOCK_EX);
-			ftruncate($handle, 0);
+			// open the file
+			$handle = fopen($this->getConfig('config_file'), 'c');
+			if ($handle)
+			{
+				// lock the file, and truncate it
+				flock($handle, LOCK_EX);
+				ftruncate($handle, 0);
 
-			fwrite($handle, '<?php'.PHP_EOL.'return '.var_export($this->data, true).';'.PHP_EOL);
+				fwrite($handle, '<?php'.PHP_EOL.'return '.var_export($this->data, true).';'.PHP_EOL);
 
-			// release the lock, and close it
-			flock($handle, LOCK_UN);
-			fclose($handle);
-		}
-		else
-		{
-			throw new AuthException('Can not open "'.$this->config['config_file'].'" for write');
+				// release the lock, and close it
+				flock($handle, LOCK_UN);
+				fclose($handle);
+			}
+			else
+			{
+				throw new AuthException('Can not open "'.$this->getConfig('config_file').'" for write');
+			}
 		}
 	}
 }

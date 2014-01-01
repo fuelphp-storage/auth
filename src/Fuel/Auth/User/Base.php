@@ -28,29 +28,26 @@ abstract class Base extends Driver
 	protected $type = 'user';
 
 	/**
-	 * @var  array  global methods, supported by all user drivers
-	 *
-	 * This list is an array with elements:
-	 * 'methodname' => array('drivertype', 'returnvalue'),
+	 * @var  array  exported methods, must be supported by all user drivers
 	 *
 	 * for every method listed, there MUST be an method definition
 	 * in this base class, to ensure the driver implements it!
 	 */
 	protected $methods = array(
-		'hasGuestSupport'  => array('user' => 'bool'),
-		'check'            => array('user' => 'bool'),
-		'validate'         => array('user' => 'bool'),
-		'login'            => array('user' => 'bool'),
-		'forceLogin'       => array('user' => 'array'),
-		'isLoggedIn'       => array('user' => 'bool'),
-		'logout'           => array('user' => 'bool'),
-		'create'           => array('user' => 'array'),
-		'update'           => array('user' => 'array'),
-		'password'         => array('user' => 'array'),
-		'reset'            => array('user' => 'array'),
-		'delete'           => array('user' => 'array'),
-		'get'              => array('user' => 'array'),
-		'getUser'          => array('user' => 'array'),
+		'hasGuestSupport',
+		'check',
+		'validate',
+		'login',
+		'forceLogin',
+		'isLoggedIn',
+		'logout',
+		'create',
+		'update',
+		'password',
+		'reset',
+		'delete',
+		'get',
+		'getUser',
 	);
 
 	/**
@@ -59,9 +56,31 @@ abstract class Base extends Driver
 	protected $guestSupport = false;
 
 	/**
+	 * @var  Input  Current applications' input container
+	 */
+	protected $input;
+
+	/**
 	 * @var  PHPSecLib\Crypt_Hash  used to create password hashes
 	 */
 	protected $hasher;
+
+	/**
+	 * Base constructor. Prepare all things common for all user drivers
+	 */
+	public function __construct(array $config = array(), $input = null)
+	{
+		parent::__construct($config);
+
+		$this->input = $input;
+
+		// note it can only be disabled, not enabled if the driver doesn't support it
+		if ($this->guestSupport)
+		{
+			// update the guest support status for this driver
+			$this->guestSupport = (bool) $this->getConfig('guest_account', $this->guestSupport);
+		}
+	}
 
 	/**
 	 * Check if this driver has guest support
@@ -164,7 +183,7 @@ abstract class Base extends Driver
 	 * Check for a logged-in user. Check uses persistence data to restore
 	 * a logged-in user if needed and supported by the driver
 	 *
-	 * @return  bool
+	 * @return  bool  true if there is a logged-in user, false if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -176,7 +195,7 @@ abstract class Base extends Driver
 	 * @param   string  $user      user identification (name, email, etc...)
 	 * @param   string  $password  the password for this user
 	 *
-	 * @return  bool
+	 * @return  int|false  the id of the user if validated, or false if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -188,11 +207,11 @@ abstract class Base extends Driver
 	 * @param   string  $user      user identification (name, email, etc...)
 	 * @param   string  $password  the password for this user
 	 *
-	 * @return  bool
+	 * @return  bool  true on a successful login, false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function login($user, $password);
+	abstract public function login($user = null, $password = null);
 
 	/**
 	 * Login user using a user id (and no password!)
@@ -202,7 +221,7 @@ abstract class Base extends Driver
 	 *
 	 * @param   string  $id  id of the user for which we need to force a login
 	 *
-	 * @return  bool
+	 * @return  bool  true on a successful login, false if it failed
 	 *
 	 * @since 2.0.0
 	 */
@@ -211,7 +230,7 @@ abstract class Base extends Driver
 	/**
 	 * Check if this driver is logged in or not
 	 *
-	 * @return  bool
+	 * @return  bool  true if there is a logged-in user, false if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -220,7 +239,7 @@ abstract class Base extends Driver
 	/**
 	 * Logout user
 	 *
-	 * @return  bool
+	 * @return  bool  true if the logout was succesful, false if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -231,6 +250,8 @@ abstract class Base extends Driver
 	 *
 	 * @param  string  $key      the field to retrieve
 	 * @param  string  $default  the value to return if not found
+	 *
+	 * @throws  AuthException  if no user is logged-in
 	 *
 	 * @return  mixed
 	 *

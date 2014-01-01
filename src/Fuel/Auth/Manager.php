@@ -22,7 +22,9 @@ class Manager
 	/**
 	 * @var  array  default auth configuration
 	 */
-	protected $config = array();
+	protected $config = array(
+		'use_all_drivers' => false,
+	);
 
 	/**
 	 * @var  array  loaded auth drivers
@@ -55,34 +57,49 @@ class Manager
 	 *
 	 * @since 2.0.0
 	 */
-	public function __call($name, $args)
+	public function __call($method, $args)
 	{
-		if (isset($this->methods[$name]))
+		if (isset($this->methods[$method]))
 		{
 			// reset the last error array
 			$this->lastErrors = array();
 
 			// get the driver type
-			$type = key($this->methods[$name]);
+			$type = $this->methods[$method];
 
 			// and process the call
-			switch ($this->methods[$name][$type])
+			$result = array();
+
+			// loop over the defined drivers
+			foreach ($this->drivers[$type] as $name => $driver)
 			{
-				case 'array':
-					return $this->returnAsArray($type, $name, $args);
-				break;
+				// call the driver method
+				try
+				{
+					if ($result[$name] = call_user_func_array(array($driver, $method), $args))
+					{
+						// if we don't have to try all, bail out now
+						if ($this->getConfig('use_all_drivers', false) === false)
+						{
+							break;
+						}
+					}
+				}
+				catch (AuthException $e)
+				{
+					// store the exception
+					$this->lastErrors[$name] = $e;
 
-				case 'bool':
-					return $this->returnAsBool($type, $name, $args);
-				break;
-
-				default:
-					throw new \ErrorException('Unknown return type "'.$this->methods[$name][$type].'" defined for "Fuel\Auth\Manager::'.$name.'()".');
+					// and reset the result
+					$result[$name] = false;
+				}
 			}
+
+			return $result;
 		}
 
 		// we don't know or support this method
-		throw new \ErrorException('Method "Fuel\Auth\Manager::'.$name.'()" does not exist.');
+		throw new \ErrorException('Method "Fuel\Auth\Manager::'.$method.'()" does not exist.');
 	}
 
 	/**
@@ -108,9 +125,8 @@ class Manager
 		// is this the first driver loaded for this type?
 		if ( ! isset($this->drivers[$type]))
 		{
-			// import any global methods from the driver
-			$this->drivers[$type] = array();
-			$this->methods = \Arr::merge($this->methods, $driver->getMethods());
+			// import all methods exported by the base class of this driver type
+			$this->methods = \Arr::merge($this->methods, array_fill_keys($driver->getMethods(), $type));
 		}
 
 		// store the driver
@@ -183,97 +199,14 @@ class Manager
 	}
 
 	/*--------------------------------------------------------------------------
-	 * User driver methods
+	 * Custom user driver methods
 	 *------------------------------------------------------------------------*/
 
 	/*--------------------------------------------------------------------------
-	 * Group driver methods
+	 * Custom group driver methods
 	 *------------------------------------------------------------------------*/
 
 	/*--------------------------------------------------------------------------
-	 * ACL driver methods
+	 * Custom ACL driver methods
 	 *------------------------------------------------------------------------*/
-
-	/*--------------------------------------------------------------------------
-	 * Internal methods
-	 *------------------------------------------------------------------------*/
-
-	/**
-	 * Calls driver methods with a consolidated boolean return value
-	 *
-	 * @return  bool
-	 *
-	 * @since 2.0.0
-	 */
-	protected function returnAsBool($type, $method, $args)
-	{
-		$result = false;
-
-		// loop over the defined drivers
-		foreach ($this->drivers[$type] as $driver)
-		{
-			// call the driver method
-			try
-			{
-				if (call_user_func_array(array($driver, $method), $args))
-				{
-					// mark the success
-					$result = true;
-
-					// if we don't have to try all, bail out now
-					if ($this->getConfig('use_all_drivers', false) === false)
-					{
-						break;
-					}
-				}
-			}
-			catch (AuthException $e)
-			{
-				$result[$name] = false;
-			}
-		}
-
-		// return the result
-		return $result;
-	}
-
-	/**
-	 * Calls driver methods with per-driver results, as assoc array
-	 *
-	 * @return  array
-	 *
-	 * @since 2.0.0
-	 */
-	protected function returnAsArray($type, $method, $args)
-	{
-		$result = array();
-
-		// loop over the defined drivers
-		foreach ($this->drivers[$type] as $name => $driver)
-		{
-			// call the driver method
-			try
-			{
-				if ($result[$name] = call_user_func_array(array($driver, $method), $args))
-				{
-					// if we don't have to try all, bail out now
-					if ($this->getConfig('use_all_drivers', false) === false)
-					{
-						break;
-					}
-				}
-			}
-			catch (AuthException $e)
-			{
-				// store the exception
-				$this->lastErrors[$name] = $e;
-
-				// and reset the result
-				$result[$name] = false;
-			}
-		}
-
-		// return the result
-		return $result;
-	}
 }

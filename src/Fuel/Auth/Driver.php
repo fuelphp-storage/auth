@@ -35,6 +35,12 @@ abstract class Driver
 	protected $readOnly = false;
 
 	/**
+	 * @var  array  default driver configuration
+	 */
+	protected $config = array(
+	);
+
+	/**
 	 * @var  array  supported global methods, with driver and return type
 	 */
 	protected $methods = array();
@@ -43,6 +49,15 @@ abstract class Driver
 	 * @var  string  driver type
 	 */
 	protected $type = 'undefined';
+
+	/**
+	 * Global driver constructor
+	 */
+	public function __construct(array $config = array())
+	{
+		// update the default config with whatever was passed
+		$this->config = \Arr::merge($this->config, $config);
+	}
 
 	/**
 	 * Set this drivers manager instance
@@ -58,7 +73,7 @@ abstract class Driver
 	 * Return the list of global methods this driver supports.
 	 *
 	 * This list is an array with elements:
-	 * 'methodname' => array('drivertype', 'returnvalue'),
+	 * 'methodname' => array('drivertype', 'returntype'),
 	 *
 	 * and should be defined in the drivers base class, since it MUST be the
 	 * same list for all drivers of the given type!
@@ -113,5 +128,17 @@ abstract class Driver
 	public function isReadOnly()
 	{
 		return $this->readOnly;
+	}
+
+	/**
+	 * set the readonly status of this driver
+	 *
+	 * @param  bool  $state
+	 *
+	 * @since 2.0.0
+	 */
+	public function setReadOnly($state)
+	{
+		$this->readOnly = (bool) $state;
 	}
 }
