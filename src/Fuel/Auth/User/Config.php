@@ -505,7 +505,7 @@ class Config extends Base
 			}
 			else
 			{
-				throw new AuthException('You can not reset the password. There is no user logged in.');
+				throw new AuthException('Unable to perform this action. There is no user logged in.');
 			}
 		}
 
@@ -531,7 +531,7 @@ class Config extends Base
 			}
 			elseif ($this->data[$id]['username'] != $username)
 			{
-				throw new AuthException('You can not reset the password of "'.$username.'". This account does not exist.');
+				throw new AuthException('Unable to perform this action. No account identified by "'.$username.'" exists.');
 			}
 		}
 
