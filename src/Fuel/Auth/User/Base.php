@@ -183,7 +183,7 @@ abstract class Base extends Driver
 	 * Check for a logged-in user. Check uses persistence data to restore
 	 * a logged-in user if needed and supported by the driver
 	 *
-	 * @return  bool  true if there is a logged-in user, false if not
+	 * @return  int|false  the id of the logged-in user, or false if not
 	 *
 	 * @since 2.0.0
 	 */
@@ -207,7 +207,7 @@ abstract class Base extends Driver
 	 * @param   string  $user      user identification (name, email, etc...)
 	 * @param   string  $password  the password for this user
 	 *
-	 * @return  bool  true on a successful login, false if it failed
+	 * @return  int|false  the id of the logged-in user, or false if login failed
 	 *
 	 * @since 2.0.0
 	 */
@@ -262,7 +262,7 @@ abstract class Base extends Driver
 	/**
 	 * Get user data
 	 *
-	 * @param  string  $username  name of the user who's data should be retrieved
+	 * @param  string  $user      id or name of the user who's data should be retrieved
 	 * @param  string  $key       the field to retrieve
 	 * @param  string  $default   the value to return if not found
 	 *
@@ -270,7 +270,7 @@ abstract class Base extends Driver
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function getUser($username, $key = null, $default = null);
+	abstract public function getUser($user, $key = null, $default = null);
 
 	/**
 	 * Create new user
@@ -298,13 +298,13 @@ abstract class Base extends Driver
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
-	 * if the username is not given, the current logged-in user will be updated.
+	 * if the user is not given, the current logged-in user will be updated.
 	 * if no user is logged in, an exception will be thrown. If a password is
 	 * given, it must match with the password of the user. If not, an exception
 	 * is thrown.
 	 *
+	 * @param  string  $user        id or name of the user to be updated
 	 * @param  array   $attributes  any attributes to be passed to the driver
-	 * @param  string  $username    name of the user to be updated
 	 * @param  string  $password    the users current password
 	 *
 	 * @throws  AuthException  if the user to be updated does not exist
@@ -314,7 +314,7 @@ abstract class Base extends Driver
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function update(Array $attributes = array(), $username = null, $password = null);
+	abstract public function update($user = null, Array $attributes = array(), $password = null);
 
 	/**
 	 * Change a user's password
@@ -325,7 +325,7 @@ abstract class Base extends Driver
 	 * user. If not, an exception is thrown.
 	 *
 	 * @param  string  $password         the users new password
-	 * @param  string  $username         name of the user to be updated
+	 * @param  string  $user             id or name of the user to be updated
 	 * @param  string  $currentPassword  the users current password
 	 *
 	 * @throws  AuthException  if the user to be updated does not exist
@@ -336,7 +336,7 @@ abstract class Base extends Driver
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function password($password, $username = null, $currentPassword = null);
+	abstract public function password($password, $user = null, $currentPassword = null);
 
 	/**
 	 * Reset a user's password
@@ -344,8 +344,7 @@ abstract class Base extends Driver
 	 * if the username is not given, the password of the current logged-in user
 	 * will be reset. if no user is logged in, an exception will be thrown.
 	 *
-	 * @param  string  $password         the users new password
-	 * @param  string  $username         name of the user to be updated
+	 * @param  string  $user      id or name of the user to be updated
 	 *
 	 * @throws  AuthException  if the user to be updated does not exist
 	 *
@@ -353,20 +352,20 @@ abstract class Base extends Driver
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function reset($username = null);
+	abstract public function reset($user = null);
 
 	/**
 	 * Delete a user
 	 *
 	 * if you delete the current logged-in user, a logout will be forced.
 	 *
-	 * @param  string  $username         name of the user to be deleted
+	 * @param  string  $user  id or name of the user to be deleted
 	 *
 	 * @throws  AuthException  if the user to be deleted does not exist
 	 *
-	 * @return  bool  true if the delete succeeded, or false if it failed
+	 * @return  mixed  the id of the account deleted, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function delete($username);
+	abstract public function delete($user);
 }

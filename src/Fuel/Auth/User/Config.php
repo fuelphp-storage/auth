@@ -10,8 +10,8 @@
 
 namespace Fuel\Auth\User;
 
-use Fuel\Auth\AuthException;
 use Fuel\Foundation\Input;
+use Fuel\Auth\AuthException;
 
 /**
  * Config based user authentication driver
@@ -98,11 +98,11 @@ class Config extends Base
 	{
 		if ( ! $this->isLoggedIn())
 		{
-			 $persistence = $this->manager->getDriver('persistence');
-			 if ($persistence and ($this->currentUser = $persistence->get('user')) !== null)
-			 {
+			$persistence = $this->manager->getDriver('persistence');
+			if ($persistence and ($this->currentUser = $persistence->get('user')) !== null)
+			{
 				return true;
-			 }
+			}
 
 			 return false;
 		}
@@ -113,7 +113,7 @@ class Config extends Base
 	/**
 	 * Validate a user
 	 *
-	 * @param   string  $user      user identification (name, email, etc...)
+	 * @param   string  $user      user identification (username or email)
 	 * @param   string  $password  the password for this user
 	 *
 	 * @return  int|false  the id of the user if validated, or false if not
@@ -124,7 +124,7 @@ class Config extends Base
 	{
 		foreach ($this->data as $id => $data)
 		{
-			if ($data['username'] == $user)
+			if ($data['username'] == $user or $data['email'] == $user)
 			{
 				$password = $this->hash($password, $data['salt']);
 				if ($data['password'] == $password)
@@ -162,7 +162,7 @@ class Config extends Base
 			{
 				$persistence->set('user', $this->currentUser);
 			}
-			return true;
+			return $id;
 		}
 
 		// login didn't validate, do a forced logout if needed
@@ -222,7 +222,7 @@ class Config extends Base
 	{
 		if ($this->isLoggedIn())
 		{
-			$this->currentUser = $this->getConfig('guest_account', false) ? 0 : null;
+			$this->currentUser = $this->guestSupport ? 0 : null;
 			if ($persistence = $this->manager->getDriver('persistence'))
 			{
 				$persistence->delete('user');
@@ -265,7 +265,7 @@ class Config extends Base
 	/**
 	 * Get user data
 	 *
-	 * @param  string  $username  name of the user who's data should be retrieved
+	 * @param  string  $user      id or name of the user who's data should be retrieved
 	 * @param  string  $key       the field to retrieve
 	 * @param  string  $default   the value to return if not found
 	 *
@@ -273,10 +273,10 @@ class Config extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function getUser($username, $key = null, $default = null)
+	public function getUser($user, $key = null, $default = null)
 	{
 		// get the id of the user who's information we want
-		$id = $this->findId($username);
+		$id = $this->findId($user);
 
 		// return either the requested value or all data
 		return func_num_args() > 1 ? \Arr::get($this->data[$id], $key, $default) : $this->data[$id];
@@ -339,8 +339,8 @@ class Config extends Base
 	 * if no user is logged in, an exception will be thrown. If a password is
 	 * given, it must match with the password. If not, an exception is thrown.
 	 *
+	 * @param  string  $user        id or name of the user to be updated
 	 * @param  array   $attributes  any attributes to be passed to the driver
-	 * @param  string  $username    name of the user to be updated
 	 * @param  string  $password    the users current password
 	 *
 	 * @throws  AuthException  if the user to be updated does not exist
@@ -350,10 +350,10 @@ class Config extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function update(Array $attributes = array(), $username = null, $password = null)
+	public function update($user = null, Array $attributes = array(), $password = null)
 	{
 		// get the id of the user we're updating
-		$id = $this->findId($username);
+		$id = $this->findId($user);
 
 		// validate the password if needed
 		if ($password and $this->hash($password, $this->data[$id]['salt']) != $this->data[$id]['password'])
@@ -379,7 +379,7 @@ class Config extends Base
 	 * user. If not, an exception is thrown.
 	 *
 	 * @param  string  $password         the users new password
-	 * @param  string  $username         name of the user to be updated
+	 * @param  string  $user             id or name of the user to be updated
 	 * @param  string  $currentPassword  the users current password
 	 *
 	 * @throws  AuthException  if the user to be updated does not exist
@@ -390,10 +390,10 @@ class Config extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function password($password, $username = null, $currentPassword = null)
+	public function password($password, $user = null, $currentPassword = null)
 	{
 		// get the id of the user we're updating
-		$id = $this->findId($username);
+		$id = $this->findId($user);
 
 		// validate the current password if needed
 		if ($currentPassword and $this->hash($currentPassword, $this->data[$id]['salt']) != $this->data[$id]['password'])
@@ -421,11 +421,10 @@ class Config extends Base
 	/**
 	 * Reset a user's password
 	 *
-	 * if the username is not given, the password of the current logged-in user
+	 * if the user is not given, the password of the current logged-in user
 	 * will be reset. if no user is logged in, an exception will be thrown.
 	 *
-	 * @param  string  $password         the users new password
-	 * @param  string  $username         name of the user to be updated
+	 * @param  string  $user      id or name of the user to be updated
 	 *
 	 * @throws  AuthException  if the user to be updated does not exist
 	 *
@@ -433,10 +432,10 @@ class Config extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function reset($username = null)
+	public function reset($user = null)
 	{
 		// get the id of the user we're updating
-		$id = $this->findId($username);
+		$id = $this->findId($user);
 
 		// generate a unique password
 		$password = $this->randomString(8);
@@ -457,18 +456,18 @@ class Config extends Base
 	 *
 	 * if you delete the current logged-in user, a logout will be forced.
 	 *
-	 * @param  string  $username         name of the user to be deleted
+	 * @param  string  $user  id or name of the user to be deleted
 	 *
 	 * @throws  AuthException  if the user to be deleted does not exist
 	 *
-	 * @return  bool  true if the delete succeeded, or false if it failed
+	 * @return  mixed  the id of the account deleted, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	public function delete($username)
+	public function delete($user)
 	{
 		// get the id of the user we're updating
-		$id = $this->findId($username);
+		$id = $this->findId($user);
 
 		// delete the user
 		unset($this->data[$id]);
@@ -489,16 +488,16 @@ class Config extends Base
 		// update the stored data
 		$this->store();
 
-		return true;
+		return $id;
 	}
 
 	/**
-	 * Find a user's id by name, or use the logged-in user's id
+	 * Find a user's id by name or email, or use the logged-in user's id
 	 */
-	protected function findId($username = null)
+	protected function findId($user = null)
 	{
-		// get the id of the user we're updating
-		if ($username === null)
+		// if no user is given, use the currently logged-in user
+		if ($user === null)
 		{
 			if ($this->isLoggedIn())
 			{
@@ -509,11 +508,19 @@ class Config extends Base
 				throw new AuthException('You can not reset the password. There is no user logged in.');
 			}
 		}
+
+		// if an id is given, ust return that
+		elseif (isset($this->data[$user]))
+		{
+			$id = $user;
+		}
+
+		// see if we can match the username or the email address
 		else
 		{
 			foreach ($this->data as $id => $data)
 			{
-				if ($data['username'] == $username)
+				if ($data['username'] == $user or $data['email'] == $user)
 				{
 					break;
 				}
