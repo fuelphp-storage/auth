@@ -80,32 +80,46 @@ class Config extends Base
 				}
 			}
 
-			// process the result
+			$updateStore = false;
+
+			// no match found, issue a new id
 			if (empty($idmatches))
 			{
-				// no match found, issue a new id
-				$id = ++$this->data['__last-issued__'];
-
-				// store the id with the lookup keys
-				foreach ($keys as $key)
-				{
-					$this->data[$key] = $id;
-				}
-
-				// update the store
-				$this->store();
+				$linkedId = ++$this->data['__last-issued__'];
+				$updateStore = true;
 			}
 
+			// one match found, get it
 			elseif (count($idmatches) === 1)
 			{
-				// return the matched id
-				return reset($idmatches);
+				// get the matched id
+				$LinkedId = reset($idmatches);
 			}
 
+			// multiple matches. this should not happen!
 			else
 			{
 				throw new AuthException('This is unexpected. Found multiple linked id\'s for a single login!');
 			}
+
+			// update the id store
+			foreach ($keys as $key)
+			{
+				if ( ! isset($this->data[$key]))
+				{
+					$this->data[$key] = $linkedId;
+					$updateStore = true;
+				}
+			}
+
+			// update the store if needed
+			if ($updateStore)
+			{
+				$this->store();
+			}
+
+			// and return the matched id
+			return $linkedId;
 		}
 
 		// unable to determine the linked id
