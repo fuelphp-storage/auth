@@ -10,6 +10,8 @@
 
 namespace Fuel\Auth\Group;
 
+use Fuel\Auth\AuthException;
+
 /**
  * Config based group authentication driver
  *
@@ -25,13 +27,6 @@ class Config extends Base
 	 * @var  bool  This is a read/write driver
 	 */
 	protected $readOnly = false;
-
-	/**
-	 * @var  array  default driver configuration
-	 */
-	protected $config = array(
-		'configFile' => 'auth-groups',
-	);
 
 	/**
 	 * @var  array  loaded group data
@@ -94,27 +89,47 @@ class Config extends Base
 	/**
 	 * Return group information
 	 *
+	 * @param  string  $group    id or name of the group we need info of
+	 * @param  string  $key      name of a group field to return
+	 * @param  mixed   $default  value to return if no match could be found on key
+	 *
 	 * @throws  AuthException  if the requested group does not exist
 	 *
 	 * @return  array
 	 *
 	 * @since 2.0.0
 	 */
-	public function getGroups($id = null, $key = null, $default = null)
+	public function getGroups($group = null, $key = null, $default = null)
 	{
 		if (func_num_args())
 		{
-			if ( ! isset($this->data[$id]))
+			if (isset($this->data[$group]))
 			{
-				throw new AuthException('There is no group defined with id "'.$id.'"');
+				$data &= $this->data[$group];
+			}
+			else
+			{
+				foreach ($this->data as $id => $groupinfo)
+				{
+					if ($groupinfo['name'] == $group)
+					{
+						$data &= $this->data[$id];
+						break;
+					}
+				}
+
+				if ( ! isset($data))
+				{
+					throw new AuthException('There is no group identified by "'.$group.'"');
+				}
 			}
 
 			if (func_num_args() === 1)
 			{
-				return $this->data[$id];
+				return $data;
 			}
 
-			return \Arr::get($this->data[$id], $key, $default);
+			return \Arr::get($data, $key, $default);
 		}
 
 		return $this->data;
@@ -125,19 +140,37 @@ class Config extends Base
 	 *
 	 * If no user is specified, the current logged-in user will be checked.
 	 *
+	 * @param  string  $group  id or name of the group to be checked
+	 * @param  string  $user   user to check. if not given, the current logged-in user will be checked
+	 *
 	 * @return  bool  true if a match is found, false if not
 	 *
 	 * @since 2.0.0
 	 */
-	public function isMember($id, $user = null)
+	public function isMember($group, $user = null)
 	{
+		// get the id for the requested group
+		if ( ! isset($this->data[$group]))
+		{
+			foreach ($this->data as $id => $groupinfo)
+			{
+				if ($groupinfo['name'] == $group)
+				{
+					$group = $id;
+					break;
+				}
+			}
+		}
+
 		// get the group memberships
 		if ($user === null)
 		{
+			// ... for the current user
 			$groups = $this->manager->get('group');
 		}
 		else
 		{
+			// ... for a named user
 			$groups = $this->manager->getUser($user, 'group');
 		}
 
@@ -148,13 +181,9 @@ class Config extends Base
 			if ($grouplist)
 			{
 				// process the group or list of groups returned
-				foreach((array) $grouplist as $group)
+				if (in_array($group, (array) $grouplist))
 				{
-					// check for an existing group and a match
-					if (isset($this->data[$group]) and $id == $group)
-					{
-						return true;
-					}
+					return true;
 				}
 			}
 		}
@@ -169,17 +198,32 @@ class Config extends Base
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
-	 * @param  string  $groupname   name of the group to be created
+	 * @param  string  $group       id of the group to be created
 	 * @param  array   $attributes  any attributes to be passed to the driver
 	 *
 	 * @throws  AuthException  if the group to be created already exists
 	 *
-	 * @return  mixed  the new id of the group created, or false if it failed
+	 * @return  bool  true if the group was succesfully created, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	public function createGroup($groupname, Array $attributes = array())
+	public function createGroup($group, Array $attributes = array())
 	{
+		if (isset($this->data[$group]))
+		{
+			throw new AuthException('Group "'.$group.'" already exists');
+		}
+
+		// create the new group
+		$this->data[$group] = $attributes;
+
+		// sort the data on group id
+		ksort($this->data);
+
+		// write it to the store
+		$this->store();
+
+		return true;
 	}
 
 	/**
@@ -189,23 +233,35 @@ class Config extends Base
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
+	 * @param  string  $group       id of the group to be updated
 	 * @param  array   $attributes  any attributes to be passed to the driver
-	 * @param  string  $groupname    name of the group to be updated
 	 *
 	 * @throws  AuthException  if the group to be updated does not exist
 	 *
-	 * @return  bool  true if the update succeeded, or false if it failed
+	 * @return  bool  true if the group was succesfully updated, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	public function updateGroup(Array $attributes = array(), $groupname = null)
+	public function updateGroup($group, Array $attributes = array())
 	{
+		if ( ! isset($this->data[$group]))
+		{
+			throw new AuthException('Group "'.$group.'" does not exist');
+		}
+
+		// update the group
+		$this->data[$group] = \Arr::merge($this->data[$group], $attributes);
+
+		// write it to the store
+		$this->store();
+
+		return true;
 	}
 
 	/**
 	 * Delete a group
 	 *
-	 * @param  string  $groupname         name of the group to be deleted
+	 * @param  string  $group  id of the group to be deleted
 	 *
 	 * @throws  AuthException  if the group to be deleted does not exist
 	 *
@@ -213,8 +269,20 @@ class Config extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function deleteGroup($groupname)
+	public function deleteGroup($group)
 	{
+		if ( ! isset($this->data[$group]))
+		{
+			throw new AuthException('Group "'.$group.'" does not exist');
+		}
+
+		// delete the group
+		unset($this->data[$group]);
+
+		// write it to the store
+		$this->store();
+
+		return true;
 	}
 
 	/**

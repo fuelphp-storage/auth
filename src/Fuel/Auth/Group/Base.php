@@ -71,24 +71,31 @@ abstract class Base extends Driver
 	/**
 	 * Return group information
 	 *
+	 * @param  string  $group    id or name of the group we need info of
+	 * @param  string  $key      name of a group field to return
+	 * @param  mixed   $default  value to return if no match could be found on key
+	 *
 	 * @throws  AuthException  if the requested group does not exist
 	 *
 	 * @return  array
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function getGroups($id = null, $key = null, $default = null);
+	abstract public function getGroups($group = null, $key = null, $default = null);
 
 	/**
 	 * Returns wether or not a user is member of the given group.
 	 *
 	 * If no user is specified, the current logged-in user will be checked.
 	 *
+	 * @param  string  $group  id or name of the group to be checked
+	 * @param  string  $user   user to check. if not given, the current logged-in user will be checked
+	 *
 	 * @return  bool  true if a match is found, false if not
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function isMember($id, $user = null);
+	abstract public function isMember($group, $user = null);
 
 	/**
 	 * Create new group
@@ -97,16 +104,16 @@ abstract class Base extends Driver
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
-	 * @param  string  $groupname   name of the group to be created
+	 * @param  string  $group       id of the group to be created
 	 * @param  array   $attributes  any attributes to be passed to the driver
 	 *
 	 * @throws  AuthException  if the group to be created already exists
 	 *
-	 * @return  mixed  the new id of the group created, or false if it failed
+	 * @return  bool  true if the group was succesfully created, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function createGroup($groupname, Array $attributes = array());
+	abstract public function createGroup($group, Array $attributes = array());
 
 	/**
 	 * Update an existing group
@@ -115,21 +122,21 @@ abstract class Base extends Driver
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
+	 * @param  string  $group       id of the group to be updated
 	 * @param  array   $attributes  any attributes to be passed to the driver
-	 * @param  string  $groupname    name of the group to be updated
 	 *
 	 * @throws  AuthException  if the group to be updated does not exist
 	 *
-	 * @return  bool  true if the update succeeded, or false if it failed
+	 * @return  bool  true if the group was succesfully updated, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function updateGroup(Array $attributes = array(), $groupname = null);
+	abstract public function updateGroup($group, Array $attributes = array());
 
 	/**
 	 * Delete a group
 	 *
-	 * @param  string  $groupname         name of the group to be deleted
+	 * @param  string  $group  id of the group to be deleted
 	 *
 	 * @throws  AuthException  if the group to be deleted does not exist
 	 *
@@ -137,5 +144,5 @@ abstract class Base extends Driver
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function deleteGroup($groupname);
+	abstract public function deleteGroup($group);
 }
