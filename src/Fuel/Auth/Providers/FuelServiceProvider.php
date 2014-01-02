@@ -57,7 +57,7 @@ class FuelServiceProvider extends ServiceProvider
 			// create the auth manager instance
 			$instance = $dic->multiton('Fuel\Auth\Manager', $name, array($config));
 
-			// closure to add a driver
+			// closure to add a driver to the Auth manager instance
 			$addDriver = function($section, $driver) use($dic, $instance) {
 				if ($driver['driver'] instanceOf Driver)
 				{
@@ -90,11 +90,39 @@ class FuelServiceProvider extends ServiceProvider
 				}
 			}
 
-			// instantiate and inject the configured persistence driver
-			if ( ! empty($config['persistence']))
+			// instantiate and inject the configured support drivers
+			foreach (array('storage', 'persistence') as $driver)
 			{
-				$config['persistence']['name'] = null;
-				$addDriver('persistence', $config['persistence']);
+				// instantiate and inject the configured support driver
+				if ( ! empty($config[$driver]) and is_array($config[$driver]))
+				{
+					// make sure it does not have a name
+					$config[$driver]['name'] = null;
+
+					// config file present?
+					if (isset($config[$driver]['config_file']))
+					{
+						// was a full path specified?
+						if (strpos($config[$driver]['config_file'], DIRECTORY_SEPARATOR) === false)
+						{
+							// get the current application object
+							$stack = $this->container->resolve('requeststack');
+							if ($request = $stack->top())
+							{
+								$app = $request->getApplication();
+							}
+							else
+							{
+								$app = $this->container->resolve('application.main');
+							}
+
+							$config[$driver]['config_file'] = $app->getPath().'config'.DIRECTORY_SEPARATOR.$config[$driver]['config_file'].'.php';
+						}
+					}
+
+					// add the driver
+					$addDriver($driver, $config[$driver]);
+				}
 			}
 
 			return $instance;
@@ -123,6 +151,12 @@ class FuelServiceProvider extends ServiceProvider
 		/**
 		 * Storage drivers
 		 */
+
+		// \Fuel\Auth\Storage\Config
+		$this->register('auth.storage.config', function ($dic, array $config = array())
+		{
+			return $dic->resolve('Fuel\Auth\Storage\Config', array($config));
+		});
 
 		// \Fuel\Auth\Storage\Db
 		$this->register('auth.storage.db', function ($dic, array $config = array())
