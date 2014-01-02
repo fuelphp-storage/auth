@@ -104,7 +104,7 @@ abstract class Base extends Driver
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
-	 * @param  string  $group       id of the group to be created
+	 * @param  string  $group       id or name of the group to be checked
 	 * @param  array   $attributes  any attributes to be passed to the driver
 	 *
 	 * @throws  AuthException  if the group to be created already exists
@@ -122,7 +122,7 @@ abstract class Base extends Driver
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
-	 * @param  string  $group       id of the group to be updated
+	 * @param  string  $group       id or name of the group to be checked
 	 * @param  array   $attributes  any attributes to be passed to the driver
 	 *
 	 * @throws  AuthException  if the group to be updated does not exist
@@ -136,7 +136,7 @@ abstract class Base extends Driver
 	/**
 	 * Delete a group
 	 *
-	 * @param  string  $group  id of the group to be deleted
+	 * @param  string  $group  id or name of the group to be checked
 	 *
 	 * @throws  AuthException  if the group to be deleted does not exist
 	 *

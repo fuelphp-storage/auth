@@ -103,33 +103,14 @@ class Config extends Base
 	{
 		if (func_num_args())
 		{
-			if (isset($this->data[$group]))
-			{
-				$data &= $this->data[$group];
-			}
-			else
-			{
-				foreach ($this->data as $id => $groupinfo)
-				{
-					if ($groupinfo['name'] == $group)
-					{
-						$data &= $this->data[$id];
-						break;
-					}
-				}
-
-				if ( ! isset($data))
-				{
-					throw new AuthException('There is no group identified by "'.$group.'"');
-				}
-			}
+			$group = $this->findId($group);
 
 			if (func_num_args() === 1)
 			{
-				return $data;
+				return $this->data[$group];
 			}
 
-			return \Arr::get($data, $key, $default);
+			return \Arr::get($this->data[$group], $key, $default);
 		}
 
 		return $this->data;
@@ -149,18 +130,7 @@ class Config extends Base
 	 */
 	public function isMember($group, $user = null)
 	{
-		// get the id for the requested group
-		if ( ! isset($this->data[$group]))
-		{
-			foreach ($this->data as $id => $groupinfo)
-			{
-				if ($groupinfo['name'] == $group)
-				{
-					$group = $id;
-					break;
-				}
-			}
-		}
+		$group = $this->findId($group);
 
 		// get the group memberships
 		if ($user === null)
@@ -233,7 +203,7 @@ class Config extends Base
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
-	 * @param  string  $group       id of the group to be updated
+	 * @param  string  $group       id or name of the group to be checked
 	 * @param  array   $attributes  any attributes to be passed to the driver
 	 *
 	 * @throws  AuthException  if the group to be updated does not exist
@@ -244,10 +214,7 @@ class Config extends Base
 	 */
 	public function updateGroup($group, Array $attributes = array())
 	{
-		if ( ! isset($this->data[$group]))
-		{
-			throw new AuthException('Group "'.$group.'" does not exist');
-		}
+		$group = $this->findId($group);
 
 		// update the group
 		$this->data[$group] = \Arr::merge($this->data[$group], $attributes);
@@ -261,7 +228,7 @@ class Config extends Base
 	/**
 	 * Delete a group
 	 *
-	 * @param  string  $group  id of the group to be deleted
+	 * @param  string  $group  id or name of the group to be checked
 	 *
 	 * @throws  AuthException  if the group to be deleted does not exist
 	 *
@@ -271,10 +238,7 @@ class Config extends Base
 	 */
 	public function deleteGroup($group)
 	{
-		if ( ! isset($this->data[$group]))
-		{
-			throw new AuthException('Group "'.$group.'" does not exist');
-		}
+		$group = $this->findId($group);
 
 		// delete the group
 		unset($this->data[$group]);
@@ -283,6 +247,34 @@ class Config extends Base
 		$this->store();
 
 		return true;
+	}
+
+	/**
+	 * Find a group's id by name
+	 */
+	protected function findId($group = null)
+	{
+		if (isset($this->data[$group]))
+		{
+			return $group;
+		}
+		else
+		{
+			foreach ($this->data as $id => $groupinfo)
+			{
+				if ($groupinfo['name'] == $group)
+				{
+					return $id;
+				}
+			}
+		}
+
+		if (empty($this->data))
+		{
+			throw new AuthException('There are no groups defined.');
+		}
+
+		throw new AuthException('Unable to perform this action. No group identified by "'.$group.'" exists.');
 	}
 
 	/**
