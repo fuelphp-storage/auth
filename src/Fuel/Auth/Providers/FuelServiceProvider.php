@@ -27,7 +27,8 @@ class FuelServiceProvider extends ServiceProvider
 	 */
 	public $provides = array(
 		'auth',
-		'auth.storage.db',
+		'auth.storage.config', 'auth.storage.db',
+		'auth.persistence.session',
 		'auth.user.config', 'auth.group.config', 'auth.acl.config',
 	);
 
@@ -63,7 +64,7 @@ class FuelServiceProvider extends ServiceProvider
 				{
 					$instance->addDriver($section, $driver['name'], $driver['driver']);
 				}
-				elseif (strpos('\\', $driver['driver']) !== false and class_exists($driver['driver']))
+				elseif (strpos($driver['driver'], '\\') !== false and class_exists($driver['driver']))
 				{
 					$class = $driver['driver'];
 					$instance->addDriver($section, $driver['name'], new $class($driver));
