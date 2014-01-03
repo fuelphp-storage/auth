@@ -48,12 +48,20 @@ abstract class Base extends Driver
 		'delete',
 		'get',
 		'getUser',
+		'getId',
+		'getName',
+		'getEmail',
 	);
 
 	/**
 	 * @var  bool  Whether or not this driver has guest support
 	 */
 	protected $guestSupport = false;
+
+	/**
+	 * @var  bool  Whether or not this driver has shadow login support
+	 */
+	protected $shadowSupport = false;
 
 	/**
 	 * @var  Input  Current applications' input container
@@ -80,6 +88,13 @@ abstract class Base extends Driver
 			// update the guest support status for this driver
 			$this->guestSupport = (bool) $this->getConfig('guest_account', $this->guestSupport);
 		}
+
+		// note it can only be disabled, not enabled if the driver doesn't support it
+		if ($this->shadowSupport)
+		{
+			// update the shadow login mode status for this driver
+			$this->shadowSupport = (bool) $this->getConfig('shadow_mode', $this->shadowSupport);
+		}
 	}
 
 	/**
@@ -92,6 +107,18 @@ abstract class Base extends Driver
 	public function hasGuestSupport()
 	{
 		return $this->guestSupport;
+	}
+
+	/**
+	 * Check if this driver has shadow login support
+	 *
+	 * @return  bool
+	 *
+	 * @since 2.0.0
+	 */
+	public function hasShadowSupport()
+	{
+		return $this->shadowSupport;
 	}
 
 	/**
@@ -214,12 +241,25 @@ abstract class Base extends Driver
 	abstract public function login($user = null, $password = null);
 
 	/**
+	 * Shadow login for a user
+	 *
+	 * @param   array  $username    assoc array with drivername => username, or false if not logged-in
+	 * @param   array  $email       assoc array with drivername => email, or false if not logged-in
+	 * @param   array  $attributes  assoc array with drivername => array with all user data per logged-in driver
+	 *
+	 * @return  int|false  the id of the logged-in user, or false if login failed
+	 *
+	 * @since 2.0.0
+	 */
+	abstract public function shadowLogin(array $username, array $email, array $attributes);
+
+	/**
 	 * Login user using a user id (and no password!)
 	 *
 	 * This method may not be supported by all user drivers, as some backends
 	 * don't allow a forced login without a password.
 	 *
-	 * @param   string  $id  id of the user for which we need to force a login
+	 * @param   string  $id  id or name of the user for which we need to force a login
 	 *
 	 * @return  bool  true on a successful login, false if it failed
 	 *
@@ -258,6 +298,39 @@ abstract class Base extends Driver
 	 * @since 2.0.0
 	 */
 	abstract public function get($key = null, $default = null);
+
+	/**
+	 * Get the current users PK (usually some form of id number)
+	 *
+	 * @throws  AuthException  if no user is logged-in
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	abstract public function getId();
+
+	/**
+	 * Get the current users username
+	 *
+	 * @throws  AuthException  if no user is logged-in
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	abstract public function getName();
+
+	/**
+	 * Get the current users email address
+	 *
+	 * @throws  AuthException  if no user is logged-in
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	abstract public function getEmail();
 
 	/**
 	 * Get user data

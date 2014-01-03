@@ -35,10 +35,16 @@ class Config extends Base
 	protected $guestSupport = true;
 
 	/**
+	 * @var  bool  This driver has shadow login support
+	 */
+	protected $shadowSupport = true;
+
+	/**
 	 * @var  array  default driver configuration
 	 */
 	protected $config = array(
-		'configFile' => 'auth-users',
+		'configFile'        => 'auth-users',
+		'group'             => 1,
 		'username_post_key' => 'username',
 		'password_post_key' => 'password',
 	);
@@ -175,9 +181,55 @@ class Config extends Base
 	}
 
 	/**
+	 * Shadow login for a user
+	 *
+	 * @param   array  $username    assoc array with drivername => username, or false if not logged-in
+	 * @param   array  $email       assoc array with drivername => email, or false if not logged-in
+	 * @param   array  $attributes  assoc array with drivername => array with all user data per logged-in driver
+	 *
+	 * @return  int|false  the id of the logged-in user, or false if login failed
+	 *
+	 * @since 2.0.0
+	 */
+	public function shadowLogin(array $username, array $email, array $attributes)
+	{
+		// is shadow mode enabled?
+		if ( ! $this->shadowSupport)
+		{
+			return false;
+		}
+
+		// strip invalid entries from the array
+		$username = array_filter($username);
+		$email = array_filter($email);
+		$attributes = array_filter($attributes);
+
+		// to avoid race conditions (multiple valid logins, different data),
+		// use the results of the first authenticated driver
+		$username = reset($username);
+		$email = reset($email);
+		$attributes = reset($attributes);
+
+		// see if we know this user
+		try
+		{
+			// find the id for this user
+			$id = $this->findId($username);
+		}
+		catch (AuthException $e)
+		{
+			// create a new user
+			$id = $this->create($username, null, array('email' => $email));
+		}
+
+		// and do a force login of the id found
+		return $this->forceLogin($id) ? $id : false;
+	}
+
+	/**
 	 * Login user using a user id (and no password!)
 	 *
-	 * @param   string  $id  id of the user for which we need to force a login
+	 * @param   string  $id  id or name of the user for which we need to force a login
 	 *
 	 * @return  bool  true on a successful login, false if it failed
 	 *
@@ -185,6 +237,9 @@ class Config extends Base
 	 */
 	public function forceLogin($id)
 	{
+		// get the id of the user who's information we want
+		$id = $this->findId($id);
+
 		if (isset($this->data[$id]))
 		{
 			$this->currentUser = $this->data[$id]['id'];
@@ -247,19 +302,74 @@ class Config extends Base
 	 */
 	public function get($key = null, $default = null)
 	{
-		if ($this->isLoggedIn())
+		if ( ! $this->isLoggedIn())
 		{
-			if ($this->currentUser === 0)
-			{
-				return func_num_args() ? \Arr::get($this->guest, $key, $default) : $this->guest;
-			}
-			else
-			{
-				return func_num_args() ? \Arr::get($this->data[$this->currentUser], $key, $default) : $this->data[$this->currentUser];
-			}
+			throw new AuthException('Can not get user data. There is no user logged-in');
 		}
 
-		throw new AuthException('Can not get user data. There is no user logged-in');
+		if ($this->currentUser === 0)
+		{
+			return func_num_args() ? \Arr::get($this->guest, $key, $default) : $this->guest;
+		}
+
+		return func_num_args() ? \Arr::get($this->data[$this->currentUser], $key, $default) : $this->data[$this->currentUser];
+	}
+
+	/**
+	 * Get the current users PK (usually some form of id number)
+	 *
+	 * @throws  AuthException  if no user is logged-in
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	public function getId()
+	{
+		if ( ! $this->isLoggedIn())
+		{
+			throw new AuthException('Can not get the user id. There is no user logged-in');
+		}
+
+		return $this->currentUser;
+	}
+
+	/**
+	 * Get the current users username
+	 *
+	 * @throws  AuthException  if no user is logged-in
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	public function getName()
+	{
+		if ( ! $this->isLoggedIn())
+		{
+			throw new AuthException('Can not get the username. There is no user logged-in');
+		}
+
+		return $this->data[$this->currentUser]['username'];
+	}
+
+	/**
+	 * Get the current users email address
+	 *
+	 * @throws  AuthException  if no user is logged-in
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	public function getEmail()
+	{
+		if ( ! $this->isLoggedIn())
+		{
+			throw new AuthException('Can not get the email address. There is no user logged-in');
+		}
+
+		return $this->data[$this->currentUser]['email'];
 	}
 
 	/**
@@ -311,13 +421,25 @@ class Config extends Base
 		}
 
 		// get it's id
-		$id = empty($this->data) ? 1 : end($this->data);
+		if (empty($this->data))
+		{
+			$id = 1;
+		}
+		else
+		{
+			end($this->data);
+			$id = key($this->data);
+			$id++;
+		}
 
 		// add it to the attributes
 		$attributes['id'] = $id;
 		$attributes['username'] = $username;
-		$attributes['salt'] = $this->salt(32);
-		$attributes['password'] = $this->hash($password, $attributes['salt']);
+		if ( ! isset($attributes['group']))
+		{
+			$attributes['group'] = $this->getConfig('group', 1);
+		}
+		$attributes['password'] = $password === null ? $password : $this->hash($password, $attributes['salt'] = $this->salt(32));
 
 		// store it
 		$this->data[$id] = $attributes;
@@ -529,9 +651,9 @@ class Config extends Base
 			{
 				throw new AuthException('There are no users defined.');
 			}
-			elseif ($this->data[$id]['username'] != $username)
+			elseif ($this->data[$id]['username'] != $user)
 			{
-				throw new AuthException('Unable to perform this action. No account identified by "'.$username.'" exists.');
+				throw new AuthException('Unable to perform this action. No account identified by "'.$user.'" exists.');
 			}
 		}
 

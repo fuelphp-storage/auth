@@ -70,22 +70,6 @@ class Manager
 	 */
 	public function __call($method, $args)
 	{
-		return $this->callMethod($method, $args, false);
-	}
-
-	/**
-	 * Call a method on all loaded drivers
-	 *
-	 * @param  string  $method      method name that was called
-	 * @param  array   $args        array of arguments for the method
-	 * @param  bool    $forceArray  if true, always return results in array format
-	 *
-	 * @return  mixed
-	 *
-	 * @since 2.0.0
-	 */
-	protected function callMethod($method, $args, $forceArray)
-	{
 		if (isset($this->methods[$method]))
 		{
 			// reset the last error array
@@ -117,12 +101,12 @@ class Manager
 					// store the exception
 					$this->lastErrors[$name] = $e;
 
-					// and reset the result
+					// and (re)set the result
 					$result[$name] = false;
 				}
 			}
 
-			if ($forceArray === false and $this->getConfig('always_return_arrays', true) === false and count($result) === 1)
+			if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
 			{
 				return reset($result);
 			}
@@ -279,21 +263,51 @@ class Manager
 	 */
 	public function login($user = null, $password = null)
 	{
-		// call the login on all loaded drivers
-		$result = $this->callMethod('login', array($user, $password), true);
-
-		// determine the linked user id
-		if ($storage = $this->getDriver('storage'))
-		{
-			if ( ! $this->linkedUserId = $storage->findLinkedUser($result))
-			{
-				// no hit, all logins must have been failed
-				$this->linkedUserId = null;
-			}
-		}
-		else
+		// make sure we have a storage driver loaded
+		if ( ! $storage = $this->getDriver('storage'))
 		{
 			throw new AuthException('no storage driver is defined, can not store user information');
+		}
+
+		$orgSetting = $this->config['always_return_arrays'];
+		$this->config['always_return_arrays'] = true;
+
+		// call the login method on all loaded drivers
+		$result = $this->__call('login', array($user, $password));
+
+		// if we have a successful login
+		if ( ! empty(array_filter($result)))
+		{
+			// do a shadow login for all login drivers that failed
+			foreach ($result as $driver => $id)
+			{
+				if ($id === false and $this->getDriver('user', $driver)->hasShadowSupport())
+				{
+					// call the driver method
+						$result[$driver] = $this->getDriver('user', $driver)->shadowLogin($this->getName(), $this->getEmail(), $this->get());
+					try
+					{
+						$result[$driver] = $this->getDriver('user', $driver)->shadowLogin($this->getName(), $this->getEmail(), $this->get());
+					}
+					catch (\Exception $e)
+					{
+						// store the exception
+						$this->lastErrors[$driver] = $e;
+
+						// and (re)set the result
+						$result[$driver] = false;
+					}
+				}
+			}
+		}
+
+		$this->config['always_return_arrays'] = $orgSetting;
+
+		// determine the linked user id
+		if ( ! $this->linkedUserId = $storage->findLinkedUser($result))
+		{
+			// no hit, all logins must have failed
+			$this->linkedUserId = null;
 		}
 
 		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
@@ -320,47 +334,45 @@ class Manager
 	 */
 	public function forceLogin($id)
 	{
-		if ($storage = $this->getDriver('storage'))
-		{
-			// fetch the driver => userid mappings for this linked id
-			$drivers = $storage->getLinkedUsers($id);
-
-			// storage for the results
-			$result = array();
-
-			// loop over the defined user drivers
-			foreach ($this->drivers['user'] as $name => $driver)
-			{
-				// if we have a match for this driver, attempt to login
-				if (isset($drivers[$name]) and $id = $drivers[$name])
-				{
-					// call the driver method
-					try
-					{
-						if ($result[$name] = call_user_func_array(array($driver, 'forceLogin'), array($id)))
-						{
-							// if we don't have to try all, bail out now
-							if ($this->getConfig('use_all_drivers', false) === false)
-							{
-								break;
-							}
-						}
-					}
-					catch (AuthException $e)
-					{
-						// store the exception
-						$this->lastErrors[$name] = $e;
-
-						// and reset the result
-						$result[$name] = false;
-					}
-				}
-			}
-			//
-		}
-		else
+		// make sure we have a storage driver loaded
+		if ( ! $storage = $this->getDriver('storage'))
 		{
 			throw new AuthException('no storage driver is defined, can not store user information');
+		}
+
+		// fetch the driver => userid mappings for this linked id
+		$drivers = $storage->getLinkedUsers($id);
+
+		// storage for the results
+		$result = array();
+
+		// loop over the defined user drivers
+		foreach ($this->drivers['user'] as $name => $driver)
+		{
+			// if we have a match for this driver, attempt to login
+			if (isset($drivers[$name]) and $id = $drivers[$name])
+			{
+				// call the driver method
+				try
+				{
+					if ($result[$name] = call_user_func_array(array($driver, 'forceLogin'), array($id)))
+					{
+						// if we don't have to try all, bail out now
+						if ($this->getConfig('use_all_drivers', false) === false)
+						{
+							break;
+						}
+					}
+				}
+				catch (AuthException $e)
+				{
+					// store the exception
+					$this->lastErrors[$name] = $e;
+
+					// and reset the result
+					$result[$name] = false;
+				}
+			}
 		}
 
 		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
@@ -392,8 +404,13 @@ class Manager
 	 */
 	public function logout()
 	{
-		// call the logout on all loaded drivers
-		$result = $this->callMethod('logout', array(), true);
+		$orgSetting = $this->config['always_return_arrays'];
+		$this->config['always_return_arrays'] = true;
+
+		// call the logout method on all loaded drivers
+		$result = $this->__call('logout', array());
+
+		$this->config['always_return_arrays'] = $orgSetting;
 
 		// check for a success for at least one driver
 		if (in_array(true, $result))
@@ -420,22 +437,26 @@ class Manager
 	 */
 	public function delete($username)
 	{
-		// call the delete on all loaded drivers
-		$result = $this->callMethod('delete', array($username), true);
-
-		// delete the linked user id information
-		if ($storage = $this->getDriver('storage'))
-		{
-			$id =  $storage->deleteLinkedUser($result);
-			if ($this->linkedUserId === $id)
-			{
-				// delete of the logged-in user, force a logout
-				$this->linkedUserId = null;
-			}
-		}
-		else
+		// make sure we have a storage driver loaded
+		if ( ! $storage = $this->getDriver('storage'))
 		{
 			throw new AuthException('no storage driver is defined, can not store user information');
+		}
+
+		$orgSetting = $this->config['always_return_arrays'];
+		$this->config['always_return_arrays'] = true;
+
+		// call the delete method on all loaded drivers
+		$result = $this->__call('delete', array($username));
+
+		$this->config['always_return_arrays'] = $orgSetting;
+
+		// delete the linked user id information
+		$id =  $storage->deleteLinkedUser($result);
+		if ($this->linkedUserId === $id)
+		{
+			// delete of the logged-in user, force a logout
+			$this->linkedUserId = null;
 		}
 
 		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
