@@ -278,16 +278,15 @@ class Manager
 		// if we have a successful login
 		if ( ! empty(array_filter($result)))
 		{
-			// do a shadow login for all login drivers that failed
+			// attempt a shadow login for all login drivers that failed
 			foreach ($result as $driver => $id)
 			{
 				if ($id === false and $this->getDriver('user', $driver)->hasShadowSupport())
 				{
 					// call the driver method
-						$result[$driver] = $this->getDriver('user', $driver)->shadowLogin($this->getName(), $this->getEmail(), $this->get());
 					try
 					{
-						$result[$driver] = $this->getDriver('user', $driver)->shadowLogin($this->getName(), $this->getEmail(), $this->get());
+						$result[$driver] = $this->getDriver('user', $driver)->shadowLogin();
 					}
 					catch (\Exception $e)
 					{

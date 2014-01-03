@@ -183,26 +183,24 @@ class Config extends Base
 	/**
 	 * Shadow login for a user
 	 *
-	 * @param   array  $username    assoc array with drivername => username, or false if not logged-in
-	 * @param   array  $email       assoc array with drivername => email, or false if not logged-in
-	 * @param   array  $attributes  assoc array with drivername => array with all user data per logged-in driver
-	 *
 	 * @return  int|false  the id of the logged-in user, or false if login failed
 	 *
 	 * @since 2.0.0
 	 */
-	public function shadowLogin(array $username, array $email, array $attributes)
+	public function shadowLogin()
 	{
-		// is shadow mode enabled?
-		if ( ! $this->shadowSupport)
+		// get the list if logged-in users
+		$username = array_filter($this->manager->getName());
+
+		// if there are no valid users, we can't attempt a shadow login
+		if (empty($username))
 		{
 			return false;
 		}
 
-		// strip invalid entries from the array
-		$username = array_filter($username);
-		$email = array_filter($email);
-		$attributes = array_filter($attributes);
+		// get the email addresses, and all available data of these users
+		$email = array_filter($this->manager->getEmail());
+		$attributes = array_filter($this->manager->get());
 
 		// to avoid race conditions (multiple valid logins, different data),
 		// use the results of the first authenticated driver

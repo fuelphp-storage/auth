@@ -243,15 +243,11 @@ abstract class Base extends Driver
 	/**
 	 * Shadow login for a user
 	 *
-	 * @param   array  $username    assoc array with drivername => username, or false if not logged-in
-	 * @param   array  $email       assoc array with drivername => email, or false if not logged-in
-	 * @param   array  $attributes  assoc array with drivername => array with all user data per logged-in driver
-	 *
 	 * @return  int|false  the id of the logged-in user, or false if login failed
 	 *
 	 * @since 2.0.0
 	 */
-	abstract public function shadowLogin(array $username, array $email, array $attributes);
+	abstract public function shadowLogin();
 
 	/**
 	 * Login user using a user id (and no password!)
