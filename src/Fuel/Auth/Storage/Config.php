@@ -93,7 +93,7 @@ class Config extends Base
 			elseif (count($idmatches) === 1)
 			{
 				// get the matched id
-				$LinkedId = reset($idmatches);
+				$linkedId = reset($idmatches);
 			}
 
 			// multiple matches. this should not happen!
