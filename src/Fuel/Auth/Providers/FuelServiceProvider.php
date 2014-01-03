@@ -30,6 +30,7 @@ class FuelServiceProvider extends ServiceProvider
 		'auth.storage.config', 'auth.storage.db',
 		'auth.persistence.session',
 		'auth.user.config', 'auth.group.config', 'auth.acl.config',
+		'auth.group.null',
 	);
 
 	/**
@@ -201,6 +202,12 @@ class FuelServiceProvider extends ServiceProvider
 		/**
 		 * Auth group drivers
 		 */
+
+		// \Fuel\Auth\Group\Null
+		$this->register('auth.group.null', function ($dic, array $config = array())
+		{
+			return $dic->resolve('Fuel\Auth\Group\Null', array($config));
+		});
 
 		// \Fuel\Auth\Group\Config
 		$this->register('auth.group.config', function ($dic, array $config = array())
