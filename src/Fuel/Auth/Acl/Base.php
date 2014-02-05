@@ -27,11 +27,20 @@ abstract class Base extends Driver
 	protected $type = 'acl';
 
 	/**
-	 * @var  array  global methods, supported by all acl drivers
+	 * @var  array  exported methods, must be supported by all user drivers
 	 *
-	 * for every method listed, there MUST be an abstract method definition
+	 * for every method listed, there MUST be an method definition
 	 * in this base class, to ensure the driver implements it!
 	 */
 	protected $methods = array(
+		'hasAccess',
 	);
+
+	/**
+	 * Base constructor. Prepare all things common for all acl drivers
+	 */
+	public function __construct(array $config = array())
+	{
+		parent::__construct($config);
+	}
 }
