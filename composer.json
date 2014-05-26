@@ -16,6 +16,6 @@
 		"fuelphp/common": "dev-master"
 	},
 	"autoload": {
-		"psr-4": { "Fuel\\Auth": "src/" }
+		"psr-4": { "Fuel\\Auth\\": "src/" }
 	}
 }
