@@ -10,25 +10,10 @@
 
 namespace Fuel\Auth\Group;
 
-use Fuel\Auth\AuthException;
+use Fuel\Auth\AuthInterface;
 
-/**
- * Null group authentication driver
- *
- * This driver doesn't do anything, and can be used if you don't require
- * group support in your Auth environment
- *
- * @package  Fuel\Auth
- *
- * @since  2.0.0
- */
-class Null extends Base
+interface GroupInterface extends AuthInterface
 {
-	/**
-	 * @var  bool  This is a ReadOnly driver
-	 */
-	protected $isReadOnly = true;
-
 	/**
 	 * Return group information for the current logged-in user
 	 *
@@ -36,11 +21,7 @@ class Null extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function getGroupName()
-	{
-		// this driver doesn't do groups
-		return array();
-	}
+	public function getGroupName();
 
 	/**
 	 * Return group information
@@ -55,11 +36,7 @@ class Null extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function getGroups($group = null, $key = null, $default = null)
-	{
-		// this driver doesn't do groups
-		return array();
-	}
+	public function getGroups($group = null, $key = null, $default = null);
 
 	/**
 	 * Returns wether or not a user is member of the given group.
@@ -73,11 +50,7 @@ class Null extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function isMember($group, $user = null)
-	{
-		// no groups, so it can never be a member
-		return false;
-	}
+	public function isMember($group, $user = null);
 
 	/**
 	 * Assigns a given group to a user
@@ -94,11 +67,7 @@ class Null extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function assignGroup($group, $user = null)
-	{
-		// this is a read-only driver
-		return false;
-	}
+	public function assignGroup($group, $user = null);
 
 	/**
 	 * Removes a given group from a user
@@ -115,11 +84,7 @@ class Null extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function removeGroup($group, $user = null)
-	{
-		// this is a read-only driver
-		return false;
-	}
+	public function removeGroup($group, $user = null);
 
 	/**
 	 * Create new group
@@ -137,11 +102,7 @@ class Null extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function createGroup($group, Array $attributes = array())
-	{
-		// this is a read-only driver
-		return false;
-	}
+	public function createGroup($group, Array $attributes = []);
 
 	/**
 	 * Update an existing group
@@ -159,11 +120,7 @@ class Null extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function updateGroup($group, Array $attributes = array())
-	{
-		// this is a read-only driver
-		return false;
-	}
+	public function updateGroup($group, Array $attributes = []);
 
 	/**
 	 * Delete a group
@@ -176,9 +133,5 @@ class Null extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function deleteGroup($group)
-	{
-		// this is a read-only driver
-		return false;
-	}
+	public function deleteGroup($group);
 }

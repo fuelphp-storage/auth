@@ -8,21 +8,22 @@
  * @link       http://fuelphp.com
  */
 
-namespace Fuel\Auth\Persistence;
-
-use Fuel\Auth\Driver;
+namespace Fuel\Auth\Acl;
 
 /**
- * Auth Persistence driver base class
+ * Null acl driver
+ *
+ * This driver doesn't do anything, and can be used if you don't require
+ * acl support in your Auth environment
  *
  * @package  Fuel\Auth
  *
  * @since  2.0.0
  */
-abstract class Base extends Driver implements PersistenceInterface
+class Null extends Base
 {
 	/**
-	 * @var  bool  These drivers do not support concurrency
+	 * @var  bool  This is a ReadOnly driver
 	 */
-	protected $hasConcurrency = false;
+	protected $isReadOnly = true;
 }

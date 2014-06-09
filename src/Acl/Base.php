@@ -4,7 +4,7 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright  2010 - 2014 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
@@ -19,27 +19,19 @@ use Fuel\Auth\Driver;
  *
  * @since  2.0.0
  */
-abstract class Base extends Driver
+abstract class Base extends Driver implements AclInterface
 {
 	/**
-	 * @var  string  type for drivers extending this base class
+	 * @var  bool  These drivers support concurrency
 	 */
-	protected $type = 'acl';
-
-	/**
-	 * @var  array  exported methods, must be supported by all user drivers
-	 *
-	 * for every method listed, there MUST be an method definition
-	 * in this base class, to ensure the driver implements it!
-	 */
-	protected $methods = array(
-		'hasAccess',
-	);
+	protected $hasConcurrency = true;
 
 	/**
 	 * Base constructor. Prepare all things common for all acl drivers
+	 *
+	 * @since 2.0.0
 	 */
-	public function __construct(array $config = array())
+	public function __construct(array $config = [])
 	{
 		parent::__construct($config);
 	}

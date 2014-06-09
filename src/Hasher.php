@@ -4,7 +4,7 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright  2010 - 2014 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
@@ -22,11 +22,13 @@ namespace Fuel\Auth;
 class Hasher
 {
 	/**
-	 *  Generate a very random salt
+	 * Generate a very random salt
 	 *
-	 *  @param  int  $length  required length of the salt string
+	 * @param  int  $length  required length of the salt string
 	 *
-	 *  @return  string  generated random salt
+	 * @return  string  generated random salt
+	 *
+	 * @since 2.0.0
 	 */
 	public function salt($length)
 	{
@@ -67,12 +69,14 @@ class Hasher
 	}
 
 	/**
-	 *  PHP native crypt() Implementation
+	 * PHP native crypt() Implementation
 	 *
-	 *  @param  string  $p  password
-	 *  @param  string  $s  salt
+	 * @param  string  $p  password
+	 * @param  string  $s  salt
 	 *
-	 *  @return  string  derived key
+	 * @return  string  derived key
+	 *
+	 * @since 2.0.0
 	 */
 	public function crypt($p, $s)
 	{
@@ -80,12 +84,14 @@ class Hasher
 	}
 
 	/**
-	 *  bcrypt() implementation using PHP's native crypt()
+	 * bcrypt() implementation using PHP's native crypt()
 	 *
-	 *  @param  string  $p  password
-	 *  @param  string  $s  salt
+	 * @param  string  $p  password
+	 * @param  string  $s  salt
 	 *
-	 *  @return  string  derived key
+	 * @return  string  derived key
+	 *
+	 * @since 2.0.0
 	 */
 	public function bcrypt($p, $s)
 	{
@@ -105,15 +111,17 @@ class Hasher
 
 
 	/**
-	 *  PBKDF2 Implementation (described in RFC 2898)
+	 * PBKDF2 Implementation (described in RFC 2898)
 	 *
-	 *  @param string p password
-	 *  @param string s salt
-	 *  @param int c iteration count (use 1000 or higher)
-	 *  @param int kl derived key length
-	 *  @param string a hash algorithm
+	 * @param string p password
+	 * @param string s salt
+	 * @param int c iteration count (use 1000 or higher)
+	 * @param int kl derived key length
+	 * @param string a hash algorithm
 	 *
-	 *  @return string derived key
+	 * @return string derived key
+	 *
+	 * @since 2.0.0
 	 */
 	public function pbkdf2($p, $s, $c, $kl, $a = 'sha256' )
 	{

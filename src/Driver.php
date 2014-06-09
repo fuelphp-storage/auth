@@ -4,13 +4,13 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2013 Fuel Development Team
+ * @copyright  2010 - 2014 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
 namespace Fuel\Auth;
 
-use Fuel\Auth\AuthException;
+use Fuel\Common\Arr;
 
 /**
  * Auth base driver class.
@@ -25,6 +25,11 @@ use Fuel\Auth\AuthException;
 abstract class Driver
 {
 	/**
+	 * @var  array  default driver configuration
+	 */
+	protected $config = [];
+
+	/**
 	 * @var  Manager  this drivers manager instance
 	 */
 	protected $manager;
@@ -32,31 +37,20 @@ abstract class Driver
 	/**
 	 * @var  bool  Whether or not this driver allows updates
 	 */
-	protected $readOnly = false;
+	protected $isReadOnly = false;
 
 	/**
-	 * @var  array  default driver configuration
+	 * @var  bool  Whether or not this driver supports concurrency
 	 */
-	protected $config = array(
-	);
-
-	/**
-	 * @var  array  supported global methods, with driver and return type
-	 */
-	protected $methods = array();
-
-	/**
-	 * @var  string  driver type
-	 */
-	protected $type = 'undefined';
+	protected $hasConcurrency = true;
 
 	/**
 	 * Global driver constructor
 	 */
-	public function __construct(array $config = array())
+	public function __construct(array $config = [])
 	{
 		// update the default config with whatever was passed
-		$this->config = \Arr::merge($this->config, $config);
+		$this->config = Arr::merge($this->config, $config);
 	}
 
 	/**
@@ -67,40 +61,6 @@ abstract class Driver
 	public function setManager(Manager $manager)
 	{
 		$this->manager = $manager;
-	}
-
-	/**
-	 * Return the list of global methods this driver supports.
-	 *
-	 * This list is an array with elements:
-	 * 'methodname' => array('drivertype', 'returntype'),
-	 *
-	 * and should be defined in the drivers base class, since it MUST be the
-	 * same list for all drivers of the given type!
-	 *
-	 * @return  array
-	 *
-	 * @since 2.0.0
-	 */
-	public function getMethods()
-	{
-		return $this->methods;
-	}
-
-	/**
-	 * Return the driver type.
-	 *
-	 * This is to ensure that nobody is trying to add a driver of type A as
-	 * type B, which would make a mess. The type should be defined in the
-	 * base class for the given type.
-	 *
-	 * @return  array
-	 *
-	 * @since 2.0.0
-	 */
-	public function getType()
-	{
-		return $this->type;
 	}
 
 	/**
@@ -115,7 +75,21 @@ abstract class Driver
 	 */
 	public function getConfig($key = null, $default = null)
 	{
-		return func_num_args() ? \Arr::get($this->config, $key, $default) : $this->config;
+		return func_num_args() ? Arr::get($this->config, $key, $default) : $this->config;
+	}
+
+	/**
+	 * Set a configation value
+	 *
+	 * @param   mixed   $key    The dot-notated key to set or array of keys
+	 * @param   mixed   $value  The value
+	 * @return  void
+	 *
+	 * @since 2.0.0
+	 */
+	public function setConfig($key, $value)
+	{
+		Arr::set($this->config, $key, $value);
 	}
 
 	/**
@@ -127,18 +101,18 @@ abstract class Driver
 	 */
 	public function isReadOnly()
 	{
-		return $this->readOnly;
+		return $this->isReadOnly;
 	}
 
 	/**
-	 * set the readonly status of this driver
+	 * get the concurrency status of this driver
 	 *
-	 * @param  bool  $state
+	 * @return  bool
 	 *
 	 * @since 2.0.0
 	 */
-	public function setReadOnly($state)
+	public function hasConcurrency()
 	{
-		$this->readOnly = (bool) $state;
+		return $this->hasConcurrency;
 	}
 }

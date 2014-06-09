@@ -4,11 +4,18 @@ php:
   - 5.4
   - 5.5
 
-before_script:
-  - curl -s http://getcomposer.org/installer | php
-  - php composer.phar install --dev
+services:
+  - mysql
 
-script: phpunit --coverage-text
+before_script:
+  - wget https://scrutinizer-ci.com/ocular.phar
+  - composer install
+
+script:
+  - vendor/bin/codecept run unit --coverage --xml
+
+after_script:
+  - php ocular.phar code-coverage:upload --format=php-clover tests/_log/coverage.xml
 
 notifications:
   irc: "irc.freenode.org#fuelphp-status"

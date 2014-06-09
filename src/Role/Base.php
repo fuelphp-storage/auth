@@ -4,22 +4,22 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2013 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
-namespace Fuel\Auth\Group;
+namespace Fuel\Auth\Role;
 
 use Fuel\Auth\Driver;
 
 /**
- * Auth Group driver base class
+ * Auth Role driver base class
  *
  * @package  Fuel\Auth
  *
  * @since  2.0.0
  */
-abstract class Base extends Driver implements GroupInterface
+abstract class Base extends Driver implements RoleInterface
 {
 	/**
 	 * @var  bool  These drivers support concurrency
@@ -27,7 +27,7 @@ abstract class Base extends Driver implements GroupInterface
 	protected $hasConcurrency = true;
 
 	/**
-	 * Base constructor. Prepare all things common for all group drivers
+	 * Base constructor. Prepare all things common for all role drivers
 	 *
 	 * @since 2.0.0
 	 */
