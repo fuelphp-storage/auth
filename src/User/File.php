@@ -61,10 +61,20 @@ class File extends Base
 	/**
 	 * Constructor, read the file store, or create it if it doesn't exist
 	 */
-	public function __construct($file)
+	public function __construct(array $config = [])
 	{
+		// deal with the config
+		parent::__construct($config);
+
+		// make sure we have a file or a path
+		if ( ! isset($config['file']))
+		{
+			// use the system temp directory
+			$config['file'] = sys_get_temp_dir();
+		}
+
 		// unify the file separators
-		$this->file = rtrim(str_replace('\\/', DIRECTORY_SEPARATOR, $file), DIRECTORY_SEPARATOR);
+		$this->file = rtrim(str_replace('\\/', DIRECTORY_SEPARATOR, $config['file']), DIRECTORY_SEPARATOR);
 
 		// if the file given is a path, construct the filename
 		if (is_dir($this->file))
@@ -149,7 +159,7 @@ class File extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function create($username, $password, Array $attributes = [])
+	public function createUser($username, $password, Array $attributes = [])
 	{
 		// check if we already have this user
 		foreach ($this->data as $id => $data)
@@ -203,7 +213,7 @@ class File extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function delete($user)
+	public function deleteUser($user)
 	{
 		// get the id of the user we're updating
 		$id = $this->findId($user);
@@ -466,7 +476,7 @@ class File extends Base
 
 		// validate the new password
 		$password = (string) $password;
-		if (empty($password) or strlen($password) < 6)
+		if (empty($password) or strlen($password) < (int) $this->getConfig('min_password_length', 6))
 		{
 			throw new AuthException('Password update failed. The new password does not validate.');
 		}
@@ -501,7 +511,7 @@ class File extends Base
 		$id = $this->findId($user);
 
 		// generate a unique password
-		$password = $this->randomString(8);
+		$password = $this->randomString($this->getConfig('new_password_length', 8));
 
 		// generate a new salt, and a hash the new password
 		$this->data[$id]['salt'] = $this->salt(32);
@@ -515,7 +525,8 @@ class File extends Base
 	}
 
 	/**
-	 * Shadow login for a user
+	 * Shadow login for a user. This method is used to create or login a local copy
+	 * of a remote user, for example in case of OAuth, OpenId or SAML type logins
 	 *
 	 * @return  int|false  the id of the logged-in user, or false if login failed
 	 *
@@ -523,39 +534,51 @@ class File extends Base
 	 */
 	public function shadowLogin()
 	{
+		// we need to make sure we always get arrays back
+		$returnArrayFlag = $this->manager->getConfig('always_return_arrays', null);
+		$this->manager->setConfig('always_return_arrays', true);
+
 		// get the list if logged-in users
 		$username = array_filter($this->manager->getName());
 
 		// if there are no valid users, we can't attempt a shadow login
-		if (empty($username))
+		if ( ! empty($username))
 		{
-			return false;
+			// get all available data of these users
+			$attributes = array_filter($this->manager->get());
+
+			// to avoid race conditions (multiple valid logins, different data),
+			// use the results of the first authenticated driver
+			$username = reset($username);
+			$attributes = reset($attributes);
+
+			// see if we know this user
+			try
+			{
+				// find the id for this user
+				$id = $this->findId($username);
+			}
+			catch (AuthException $e)
+			{
+				// create a new user with a random password and  the same attribute set
+				$id = $this->createUser($username, $this->randomString($this->getConfig('new_password_length', 8)), $attributes);
+			}
 		}
 
-		// get the email addresses, and all available data of these users
-		$email = array_filter($this->manager->getEmail());
-		$attributes = array_filter($this->manager->get());
-
-		// to avoid race conditions (multiple valid logins, different data),
-		// use the results of the first authenticated driver
-		$username = reset($username);
-		$email = reset($email);
-		$attributes = reset($attributes);
-
-		// see if we know this user
-		try
+		// restore the flag
+		if ( ! is_null($returnArrayFlag))
 		{
-			// find the id for this user
-			$id = $this->findId($username);
-		}
-		catch (AuthException $e)
-		{
-			// create a new user
-			$id = $this->create($username, null, array('email' => $email));
+			$this->manager->setConfig('always_return_arrays', $returnArrayFlag);
 		}
 
-		// and do a force login of the id found
-		return $this->forceLogin($id) ? $id : false;
+		// and do a force login of the id found (if any)
+		if (isset($id) and $this->forceLogin($id))
+		{
+			return $id;
+		}
+
+		// forced login failed
+		return false;
 	}
 
 	/**
@@ -580,7 +603,7 @@ class File extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function update($user = null, Array $attributes = array(), $password = null)
+	public function updateUser($user = null, Array $attributes = array(), $password = null)
 	{
 		// get the id of the user we're updating
 		$id = $this->findId($user);
@@ -592,7 +615,7 @@ class File extends Base
 		}
 
 		// update the user
-		$this->data[$id] = \Arr::merge($this->data[$id], $attributes);
+		$this->data[$id] = Arr::merge($this->data[$id], $attributes);
 
 		// write the update
 		$this->store();

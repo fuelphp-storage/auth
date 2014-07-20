@@ -71,43 +71,73 @@ abstract class Base extends Driver implements UserInterface
 	 *
 	 * @since 1.0.0
 	 */
-	public function hasher()
+	public function hasher($hasher = null)
 	{
 		if ( ! $this->hasher)
 		{
-			// get an instance of our Crypt Hasher
-			$this->hasher = new Hasher();
+			// create an instance of the default Crypt Hasher
+			$this->setHasher();
 		}
 
 		return $this->hasher;
 	}
 
 	/**
+	 * Sets the hash object and creates it if necessary
+	 *
+	 * @return  Hasher
+	 *
+	 * @since 1.0.0
+	 */
+	public function setHasher($hasher = null)
+	{
+		// was one passed
+		if ($hasher and $hasher instanceOf Hasher)
+		{
+			// use it
+			$this->hasher = $hasher;
+		}
+		else
+		{
+			// get an instance of our Crypt Hasher
+			$this->hasher = new Hasher();
+		}
+	}
+
+	/**
 	 * Default password hash method
 	 *
 	 * @param   string  the string to hash
-	 * @param   string  the salt to use
-	 * @param   string  hash method to use
+	 * @param   string  the individual-salt to use
+	 * @param   string  the method to use to hash the string
 	 *
 	 * @return  string  the hashed string, base64 encoded
 	 *
 	 * @since 1.0.0
 	 */
-	public function hash($password, $salt = null, $method = 'pbkdf2')
+	public function hash($password, $salt = '', $method = 'pbkdf2')
 	{
 		switch ($method)
 		{
-			case 'bcrypt':
-				$hash = base64_encode($this->hasher()->bcrypt($password, $salt ?: $this->manager->getConfig('salt', '')));
+			case 'pbkdf2':
+				$hash = base64_encode($this->hasher()->pbkdf2($password, (string) $salt.$this->manager->getConfig('salt', ''), $this->manager->getConfig('iterations', 10000), 32));
 			break;
 
 			case 'crypt':
-				$hash = base64_encode($this->hasher()->crypt($password, $salt ?: $this->manager->getConfig('salt', '')));
+			case 'bcrypt':
+				$hash = base64_encode($this->hasher()->{$method}($password, (string) $salt.$this->manager->getConfig('salt', '')));
 			break;
 
-			case 'pbkdf2':
 			default:
-				$hash = base64_encode($this->hasher()->pbkdf2($password, $salt ?: $this->manager->getConfig('salt', ''), $this->manager->getConfig('iterations', 10000), 32));
+				if (is_callable(array($this->hasher(), $method)))
+				{
+					$hash = base64_encode($this->hasher()->{$method}($password, (string) $salt.$this->manager->getConfig('salt', '')));
+				}
+				else
+				{
+					throw new AuthException('There is no hashing method called "'.$method.'" defined in the loaded hasher');
+				}
+			break;
 		}
 
 		return $hash;

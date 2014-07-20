@@ -12,7 +12,7 @@ namespace Fuel\Auth\Storage;
 
 use Fuel\Auth\AuthInterface;
 
-interface StorageInterface extends AuthInterface
+interface StorageInterface
 {
 	/**
 	 * Find the unified user id using the login id's from all drivers

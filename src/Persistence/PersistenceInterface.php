@@ -12,7 +12,7 @@ namespace Fuel\Auth\Persistence;
 
 use Fuel\Auth\AuthInterface;
 
-interface PersistenceInterface extends AuthInterface
+interface PersistenceInterface
 {
 	/**
 	 * get a value from persistent storage

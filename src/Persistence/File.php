@@ -38,10 +38,17 @@ class File extends Base
 	/**
 	 * Constructor, read the file store, or create it if it doesn't exist
 	 */
-	public function __construct($file)
+	public function __construct(array $config = [])
 	{
+		// make sure we have a file or a path
+		if ( ! isset($config['file']))
+		{
+			// use the system temp directory
+			$config['file'] = sys_get_temp_dir();
+		}
+
 		// unify the file separators
-		$this->file = rtrim(str_replace('\\/', DIRECTORY_SEPARATOR, $file), DIRECTORY_SEPARATOR);
+		$this->file = rtrim(str_replace('\\/', DIRECTORY_SEPARATOR, $config['file']), DIRECTORY_SEPARATOR);
 
 		// if the file given is a path, construct the filename
 		if (is_dir($this->file))

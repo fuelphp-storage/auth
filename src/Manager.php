@@ -464,6 +464,46 @@ class Manager
 	 */
 	public function forceLogin($id)
 	{
+		// make sure we have a storage driver loaded
+		if ( ! $storage = $this->getStorageDriver())
+		{
+			throw new AuthException('No storage driver is defined, can not access global auth information');
+		}
+
+		// storage for the result
+		$result = array();
+
+		// get the list of drivers that has an account for this user
+		if ($accounts = $storage->getUnifiedUsers($id))
+		{
+			// loop over the list
+			foreach($accounts as $driver => $id)
+			{
+				// if we don't have this driver loaded
+				if ( ! isset($this->drivers[$driver]))
+				{
+					// then the login obviously failed
+					$result[$driver] = false;
+				}
+				else
+				{
+					// if the driver is already in logged-in state
+					if ($this->drivers[$driver]->isLoggedIn())
+					{
+						// then there's no point logging in again
+						$result[$driver] = false;
+					}
+					else
+					{
+						// attempt a forced login
+						$result[$driver] = $this->drivers[$driver]->forceLogin($id);
+					}
+				}
+			}
+		}
+
+		// return the result
+		return $result;
 	}
 
 	/**

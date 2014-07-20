@@ -159,7 +159,7 @@ interface UserInterface extends AuthInterface
 	 *
 	 * @since 2.0.0
 	 */
-	public function create($username, $password, Array $attributes = []);
+	public function createUser($username, $password, Array $attributes = []);
 
 	/**
 	 * Update an existing user
@@ -183,7 +183,7 @@ interface UserInterface extends AuthInterface
 	 *
 	 * @since 2.0.0
 	 */
-	public function update($user = null, Array $attributes = array(), $password = null);
+	public function updateUser($user = null, Array $attributes = array(), $password = null);
 
 	/**
 	 * Change a user's password
@@ -236,7 +236,7 @@ interface UserInterface extends AuthInterface
 	 *
 	 * @since 2.0.0
 	 */
-	public function delete($user);
+	public function deleteUser($user);
 
 	/**
 	 * Returns the hash object and creates it if necessary
