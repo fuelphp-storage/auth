@@ -16,3 +16,6 @@ nbproject/
 *.sublime-project
 *.sublime-workspace
 test.sh
+
+tests/_output/*
+tests/_output/*
