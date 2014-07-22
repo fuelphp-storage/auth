@@ -81,6 +81,21 @@ interface GroupInterface extends AuthInterface
 	public function assignUserToGroup($group, $user = null);
 
 	/**
+	 * Assigns a given group to another group (group nesting)
+	 *
+	 * @param  string  $group    id or name of the group to assign. This group must exist
+	 * @param  string  $groupid  id of the group to assign to. This group must exist
+	 *
+	 * @throws  AuthException  if the requested group does not exist
+	 * @throws  AuthException  if the group to assign to  does not exist
+	 *
+	 * @return  mixed  the id of the group assigned, or false if it failed
+	 *
+	 * @since 2.0.0
+	 */
+	public function assignGroupToGroup($group, $groupid);
+
+	/**
 	 * Return a list of all groups assigned to the current logged-in user
 	 *
 	 * @return  array  assoc array with groupid => name
@@ -145,6 +160,21 @@ interface GroupInterface extends AuthInterface
 	 * @since 2.0.0
 	 */
 	public function removeUserFromGroup($group, $user = null);
+
+	/**
+	 * Removes a given group to another group (group nesting)
+	 *
+	 * @param  string  $group    id or name of the group to assign. This group must exist
+	 * @param  string  $groupid  id of the group to assign to. This group must exist
+	 *
+	 * @throws  AuthException  if the requested group does not exist
+	 * @throws  AuthException  if the group to assign to  does not exist
+	 *
+	 * @return  mixed  the id of the group removed, or false if it failed
+	 *
+	 * @since 2.0.0
+	 */
+	public function removeGroupFromGroup($group, $groupid);
 
 	/**
 	 * Called when a user is deleted, can be used for cleanup purposes
