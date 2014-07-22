@@ -34,7 +34,7 @@ $manager = new \Fuel\Auth\Manager(
 
 // assign our Auth drivers
 $manager->addDriver(new \Fuel\Auth\User\File(['min_password_length' => 6, 'new_password_length' => 8, 'file' => '/tmp']), 'user');
-#$manager->addDriver(new \Fuel\Auth\Group\Null, 'group');
+$manager->addDriver(new \Fuel\Auth\Group\File(['file' => '/tmp']), 'group');
 #$manager->addDriver(new \Fuel\Auth\Role\Null, 'role');
 #$manager->addDriver(new \Fuel\Auth\Acl\Null, 'acl');
 
@@ -50,7 +50,7 @@ checkResult($result, "User with id: %d logged in", "Failed to login user: ");
 
 // TEST: get the unified user id
 echo "TEST: USER GETUSERID",PHP_EOL;
-checkResult($manager->getUserId(), "New user has unified id: %d", "Mismatch detected when fetching the unified user id:");
+checkResult($userid = $manager->getUserId(), "New user has unified id: %d", "Mismatch detected when fetching the unified user id:");
 
 // TEST: get the unified user id
 echo "TEST: USER GETID",PHP_EOL;
@@ -95,7 +95,7 @@ checkResult($manager->password('a'), "Password changed without a user?", "Unable
 
 // TEST: force login user 1
 echo "TEST: FORCE LOGIN",PHP_EOL;
-checkResult($manager->forceLogin(1), "Force login succeeded", "Force login failed");
+checkResult($manager->forceLogin($userid), "Force login succeeded", "Force login failed");
 
 // TEST: password change with invalid password
 echo "TEST: CHANGE PASSWORD 2",PHP_EOL;
@@ -124,13 +124,33 @@ checkResult($email1 !== $email2, "Email address succesfully changed", "Unable to
 
 // TEST: validate user and password
 echo "TEST: VALIDATE USER",PHP_EOL;
-checkResult( ! $manager->validate('admin', 'rubish'), "Invalid password handled correctly", "Unable to validate user and password");
+checkResult( ! $manager->validate('admin', 'rubbish'), "Invalid password handled correctly", "Unable to validate user and password");
 checkResult($manager->validate('admin', $newpass), "User correctly validated", "Unable to validate user and password");
-var_dump($newpass);
+
+// TEST: empty group test
+echo "TEST: NO GROUPS",PHP_EOL;
+checkResult($manager->getAllGroups() == [], "Group driver responded correctly", "Incorrect result from initial getAllGroups call");
+
+// TEST: create test group
+echo "TEST: CREATE GROUP",PHP_EOL;
+checkResult($manager->createGroup('test', []), "Successful created test group with id: %d", "Test group creation failed:");
+
+// TEST: assign test group to user
+echo "TEST: ASSIGN GROUP",PHP_EOL;
+checkResult($manager->assignUserToGroup('test', $userid), "Successful assigned test group", "Test group assignment failed:");
+
 // TEST: delete the test user
 echo "TEST: USER DELETE",PHP_EOL;
-$result = $manager->deleteUser('admin');
+$result = $manager->deleteUser($userid);
 checkResult($result, "Deleted user with id: %d", "Failed deleting the user: ");
+
+// TEST: create test group
+echo "TEST: DELETE GROUP",PHP_EOL;
+checkResult($manager->deleteGroup('test'), "Successfully deleted the test group", "Test group deletion failed:");
+
+// TEST: empty group test
+echo "TEST: NO GROUPS 2",PHP_EOL;
+checkResult($manager->getAllGroups() == [], "Group driver responded correctly", "Incorrect result from final getAllGroups call");
 
 // TEST: check this user
 echo "TEST: CHECK LOGIN 3",PHP_EOL;

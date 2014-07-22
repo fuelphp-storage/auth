@@ -35,4 +35,19 @@ abstract class Base extends Driver implements GroupInterface
 	{
 		parent::__construct($config);
 	}
+
+	/**
+	 * Called when a user is deleted, can be used for cleanup purposes
+	 *
+	 * @param  string  $user  id of the user to be deleted
+	 *
+	 * @return  mixed  the id of the account deleted, or false if it failed
+	 *
+	 * @since 2.0.0
+	 */
+	public function deleteUser($id)
+	{
+		// by default, group drivers don't do user cleanup
+		return false;
+	}
 }

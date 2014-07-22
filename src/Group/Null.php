@@ -30,114 +30,22 @@ class Null extends Base
 	protected $isReadOnly = true;
 
 	/**
-	 * Return group information for the current logged-in user
-	 *
-	 * @return  array  assoc array with groupid => name
-	 *
-	 * @since 2.0.0
-	 */
-	public function getGroupName()
-	{
-		// this driver doesn't do groups
-		return array();
-	}
-
-	/**
-	 * Return group information
-	 *
-	 * @param  string  $group    id or name of the group we need info of
-	 * @param  string  $key      name of a group field to return
-	 * @param  mixed   $default  value to return if no match could be found on key
-	 *
-	 * @throws  AuthException  if the requested group does not exist
-	 *
-	 * @return  array
-	 *
-	 * @since 2.0.0
-	 */
-	public function getGroups($group = null, $key = null, $default = null)
-	{
-		// this driver doesn't do groups
-		return array();
-	}
-
-	/**
-	 * Returns wether or not a user is member of the given group.
-	 *
-	 * If no user is specified, the current logged-in user will be checked.
-	 *
-	 * @param  string  $group  id or name of the group to be checked
-	 * @param  string  $user   user to check. if not given, the current logged-in user will be checked
-	 *
-	 * @return  bool  true if a match is found, false if not
-	 *
-	 * @since 2.0.0
-	 */
-	public function isMember($group, $user = null)
-	{
-		// no groups, so it can never be a member
-		return false;
-	}
-
-	/**
-	 * Assigns a given group to a user
-	 *
-	 * If no user is specified, the current logged-in user will be used.
-	 *
-	 * @param  string  $group  id or name of the group to assign. This group must exist
-	 * @param  string  $user   user to check. if not given, the current logged-in user will be checked
-	 *
-	 * @throws  AuthException  if the requested group does not exist
-	 * @throws  AuthException  if there is no user
-	 *
-	 * @return  bool  true if the assignment was a success, false if not
-	 *
-	 * @since 2.0.0
-	 */
-	public function assignGroup($group, $user = null)
-	{
-		// this is a read-only driver
-		return false;
-	}
-
-	/**
-	 * Removes a given group from a user
-	 *
-	 * If no user is specified, the current logged-in user will be used.
-	 *
-	 * @param  string  $group  id or name of the group to remove. This group must be assigned
-	 * @param  string  $user   user to check. if not given, the current logged-in user will be checked
-	 *
-	 * @throws  AuthException  if the requested group does not exist
-	 * @throws  AuthException  if there is no user
-	 *
-	 * @return  bool  true if the removal was a success, false if not
-	 *
-	 * @since 2.0.0
-	 */
-	public function removeGroup($group, $user = null)
-	{
-		// this is a read-only driver
-		return false;
-	}
-
-	/**
 	 * Create new group
 	 *
 	 * the use of the attributes array will depend on the driver. since drivers
 	 * can be switched, the method must check the attributes for missing values
 	 * and ignore values it doesn't need or use.
 	 *
-	 * @param  string  $group       id of the group to be created
+	 * @param  string  $group       name of the group to be created
 	 * @param  array   $attributes  any attributes to be passed to the driver
 	 *
 	 * @throws  AuthException  if the group to be created already exists
 	 *
-	 * @return  bool  true if the group was succesfully created, or false if it failed
+	 * @return  mixed  the key of the group created, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	public function createGroup($group, Array $attributes = array())
+	public function createGroup($group, Array $attributes = [])
 	{
 		// this is a read-only driver
 		return false;
@@ -155,14 +63,13 @@ class Null extends Base
 	 *
 	 * @throws  AuthException  if the group to be updated does not exist
 	 *
-	 * @return  bool  true if the group was succesfully updated, or false if it failed
+	 * @return  mixed  the id of the group updated, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	public function updateGroup($group, Array $attributes = array())
+	public function updateGroup($group, Array $attributes = [])
 	{
-		// this is a read-only driver
-		return false;
+		throw new AuthException('There are no groups defined.');
 	}
 
 	/**
@@ -172,13 +79,117 @@ class Null extends Base
 	 *
 	 * @throws  AuthException  if the group to be deleted does not exist
 	 *
-	 * @return  bool  true if the delete succeeded, or false if it failed
+	 * @return  mixed  the id of the group deleted, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
 	public function deleteGroup($group)
 	{
+		throw new AuthException('There are no groups defined.');
+	}
+
+	/**
+	 * Assigns a given group to a user
+	 *
+	 * If no user is specified, the current logged-in user will be used.
+	 *
+	 * @param  string  $group  id or name of the group to assign. This group must exist
+	 * @param  string  $user   user to assign to. if not given, the current logged-in user will be used
+	 *
+	 * @throws  AuthException  if the requested group does not exist
+	 * @throws  AuthException  if there is no user
+	 *
+	 * @return  mixed  the id of the group assigned, or false if it failed
+	 *
+	 * @since 2.0.0
+	 */
+	public function assignUserToGroup($group, $user = null)
+	{
+		throw new AuthException('There are no groups defined.');
+	}
+
+	/**
+	 * Return a list of all groups assigned to the current logged-in user
+	 *
+	 * @return  array  assoc array with groupid => name
+	 *
+	 * @throws  AuthException  if there is no user
+	 *
+	 * @since 2.0.0
+	 */
+	public function getAssignedGroups()
+	{
 		// this is a read-only driver
+		return array();
+	}
+
+	/**
+	 * Return a list of all groups defined
+	 *
+	 * @return  array  assoc array with groupid => name
+	 *
+	 * @since 2.0.0
+	 */
+	public function getAllGroups()
+	{
+		// this is a read-only driver
+		return array();
+	}
+
+	/**
+	 * Return group information
+	 *
+	 * @param  string  $group    id or name of the group we need info of
+	 * @param  string  $key      name of a group field to return
+	 * @param  mixed   $default  value to return if no match could be found on key
+	 *
+	 * @throws  AuthException  if the requested group does not exist
+	 *
+	 * @return  mixed
+	 *
+	 * @since 2.0.0
+	 */
+	public function getGroup($group, $key = null, $default = null)
+	{
+		throw new AuthException('There are no groups defined.');
+	}
+
+	/**
+	 * Returns wether or not a user is member of the given group.
+	 *
+	 * If no user is specified, the current logged-in user will be checked.
+	 *
+	 * @param  string  $group  id or name of the group to be checked
+	 * @param  string  $user   user to check. if not given, the current logged-in user will be checked
+	 *
+	 * @return  bool  true if a match is found, false if not
+	 *
+	 * @since 2.0.0
+	 */
+	public function isMemberOf($group, $user = null)
+	{
+		// no groups, so user can't be a member
 		return false;
 	}
+
+	/**
+	 * Removes a given group from a user
+	 *
+	 * If no user is specified, the current logged-in user will be used.
+	 *
+	 * @param  string  $group  id or name of the group to remove. This group must be assigned
+	 * @param  string  $user   user to check. if not given, the current logged-in user will be checked
+	 *
+	 * @throws  AuthException  if the requested group does not exist
+	 * @throws  AuthException  if there is no user
+	 *
+	 * @return  mixed  the id of the group removed, or false if it failed
+	 *
+	 * @since 2.0.0
+	 */
+	public function removeUserFromGroup($group, $user = null)
+	{
+		throw new AuthException('There are no groups defined.');
+	}
+
 }

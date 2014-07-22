@@ -671,7 +671,7 @@ class File extends Base
 			}
 		}
 
-		// if an id is given, ust return that
+		// if an id is given, just return that
 		elseif (isset($this->data[$user]))
 		{
 			$id = $user;

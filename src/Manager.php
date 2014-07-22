@@ -86,22 +86,6 @@ class Manager
 	 */
 	public function __call($method, $args)
 	{
-		// DEBUG CODE - REMOVE THIS LATER !
-		foreach($this->methods as $_method => $_drivers)
-		{
-			if (count($_drivers) !== 1)
-			{
-				echo "WARNING - Duplicate method '".$_method."' detected: (";
-				$_drlist = '';
-				foreach ($_drivers as $_driver)
-				{
-					$_drlist .= (empty($_drlist) ? '' : ', ').get_class($_driver);
-				}
-				echo $_drlist.")".PHP_EOL;
-			}
-		}
-		// DEBUG CODE - REMOVE THIS LATER !
-
 		// do we know this method?
 		if (isset($this->methods[$method]))
 		{
@@ -198,9 +182,6 @@ class Manager
 			throw new AuthException('Driver '.get_class($driver).' does not implement Fuel\Auth\AuthInterface.');
 		}
 
-		// link this driver to it's manager
-		$driver->setManager($this);
-
 		// if no name is given, use the class name
 		if ( ! $name)
 		{
@@ -219,18 +200,27 @@ class Manager
 		{
 			if (in_array('Fuel\Auth\AuthInterface', class_implements($interface, false)))
 			{
+				// check the concurrency status of this driver
+				if ( ! $driver->hasConcurrency())
+				{
+					foreach($this->drivers as $loadedDriver)
+					{
+						if ($loadedDriver instanceOf $interface)
+						{
+							throw new AuthException('A driver with interface '.$interface.' is already loaded and multiple drivers of this type are not supported.');
+						}
+					}
+				}
+
+				// mark the interface as present
 				$interfacePresent = true;
 
-				// store the method reference
+				// store the method references
 				foreach (get_class_methods($interface) as $method)
 				{
 					if ( ! isset($this->methods[$method]))
 					{
 						$this->methods[$method] = [];
-					}
-					elseif ( ! $driver->hasConcurrency())
-					{
-						throw new AuthException('A driver with name '.$name.' is already loaded and multiple drivers of this type are not supported.');
 					}
 
 					$this->methods[$method][$name] = $driver;
@@ -244,6 +234,10 @@ class Manager
 			throw new AuthException('Driver '.get_class($driver).' does not implement an Interface that implements Fuel\Auth\AuthInterface.');
 		}
 
+		// link this driver to it's manager
+		$driver->setManager($this);
+
+		// and store it
 		$this->drivers[$name] = $driver;
 	}
 
@@ -458,7 +452,7 @@ class Manager
 	 *
 	 * @throws  AuthException  if no storage driver is defined
 	 *
-	 * @return  array  results of all user drivers
+	 * @return  mixed  results of the called user drivers
 	 *
 	 * @since 2.0.0
 	 */
@@ -487,22 +481,18 @@ class Manager
 				}
 				else
 				{
-					// if the driver is already in logged-in state
-					if ($this->drivers[$driver]->isLoggedIn())
-					{
-						// then there's no point logging in again
-						$result[$driver] = false;
-					}
-					else
-					{
-						// attempt a forced login
-						$result[$driver] = $this->drivers[$driver]->forceLogin($id);
-					}
+					// attempt a forced login
+					$result[$driver] = $this->drivers[$driver]->forceLogin($id);
 				}
 			}
 		}
 
 		// return the result
+		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
+		{
+			return reset($result);
+		}
+
 		return $result;
 	}
 
@@ -532,6 +522,11 @@ class Manager
 			$this->unifiedUserId = null;
 		}
 
+		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
+		{
+			return reset($result);
+		}
+
 		return $result;
 	}
 
@@ -540,15 +535,13 @@ class Manager
 	 *
 	 * if you delete the current logged-in user, a logout will be forced.
 	 *
-	 * @param  string  $username         name of the user to be deleted
+	 * @param  string  $id  unified id of the user to be deleted
 	 *
-	 * @throws  AuthException  if the user to be deleted does not exist
-	 *
-	 * @return  bool  true if the delete succeeded, or false if it failed
+	 * @return  bool  true if the account, or false if it failed
 	 *
 	 * @since 2.0.0
 	 */
-	public function delete($username)
+	public function deleteUser($id)
 	{
 		// make sure we have a storage driver loaded
 		if ( ! $storage = $this->getStorageDriver())
@@ -556,29 +549,64 @@ class Manager
 			throw new AuthException('No storage driver is defined, can not access global auth information');
 		}
 
-		// store the return type setting
-		$orgSetting = $this->config['always_return_arrays'];
-		$this->config['always_return_arrays'] = true;
+		// get the list of drivers that has an account for this user
+		$accounts = $storage->getUnifiedUsers($id);
 
-		// call the delete method on all loaded drivers
-		$result = $this->__call('delete', array($username));
-
-		// restore the return type setting
-		$this->config['always_return_arrays'] = $orgSetting;
-
-		// delete the unified user information
-		$id =  $storage->deleteUnifiedUser($result);
-		if ($this->unifiedUserId === $id)
+		// do we have any drivers with this method?
+		if (isset($this->methods['deleteUser']))
 		{
-			// delete of the logged-in user, force a logout
-			$this->unifiedUserId = null;
+			// reset the last error array
+			$this->lastErrors = [];
+
+			// some storage for the results
+			$result = [];
+
+			// loop over the defined drivers
+			foreach ($this->methods['deleteUser'] as $name => $driver)
+			{
+				// call the driver method
+				try
+				{
+					// determine the argument
+					if (isset($accounts[$name]))
+					{
+						// drivers local user id
+						$user = $accounts[$name];
+					}
+					else
+					{
+						// use the unified id
+						$user = $id;
+					}
+
+					$result[$name] = $driver->deleteUser($user);
+				}
+				catch (AuthException $e)
+				{
+					// store the exception
+					$this->lastErrors[$name] = $e;
+
+					// and (re)set the result
+					$result[$name] = false;
+				}
+			}
+
+			// delete the unified user information
+			$id = $storage->deleteUnifiedUser($result);
+			if ($this->unifiedUserId === $id)
+			{
+				// delete of the logged-in user, force a logout
+				$this->unifiedUserId = null;
+			}
+
+			if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
+			{
+				return reset($result);
+			}
+
+			return $result;
 		}
 
-		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
-		{
-			return reset($result);
-		}
-
-		return $result;
+		return false;
 	}
 }
