@@ -35,7 +35,7 @@ $manager = new \Fuel\Auth\Manager(
 // assign our Auth drivers
 $manager->addDriver(new \Fuel\Auth\User\File(['min_password_length' => 6, 'new_password_length' => 8, 'file' => '/tmp']), 'user');
 $manager->addDriver(new \Fuel\Auth\Group\File(['file' => '/tmp']), 'group');
-#$manager->addDriver(new \Fuel\Auth\Role\Null, 'role');
+$manager->addDriver(new \Fuel\Auth\Role\File(['file' => '/tmp']), 'role');
 #$manager->addDriver(new \Fuel\Auth\Acl\Null, 'acl');
 
 // TEST: create a user to test with
@@ -139,18 +139,38 @@ checkResult($manager->createGroup('test', []), "Successful created test group wi
 echo "TEST: ASSIGN GROUP",PHP_EOL;
 checkResult($manager->assignUserToGroup('test', $userid), "Successful assigned test group", "Test group assignment failed:");
 
+// TEST: empty role test
+echo "TEST: NO ROLES",PHP_EOL;
+checkResult($manager->getAllRoles() == [], "Role driver responded correctly", "Incorrect result from initial getAllRoles call");
+
+// TEST: create test role
+echo "TEST: CREATE ROLE",PHP_EOL;
+checkResult($manager->createRole('test', []), "Successful created test role with id: %d", "Test role creation failed:");
+
+// TEST: assign test role to user
+echo "TEST: ASSIGN ROLE",PHP_EOL;
+checkResult($manager->assignUserToRole('test', $userid), "Successful assigned test role", "Test role assignment failed:");
+
 // TEST: delete the test user
 echo "TEST: USER DELETE",PHP_EOL;
 $result = $manager->deleteUser($userid);
 checkResult($result, "Deleted user with id: %d", "Failed deleting the user: ");
 
-// TEST: create test group
+// TEST: delete test group
 echo "TEST: DELETE GROUP",PHP_EOL;
 checkResult($manager->deleteGroup('test'), "Successfully deleted the test group", "Test group deletion failed:");
 
 // TEST: empty group test
 echo "TEST: NO GROUPS 2",PHP_EOL;
 checkResult($manager->getAllGroups() == [], "Group driver responded correctly", "Incorrect result from final getAllGroups call");
+
+// TEST: delete test role
+echo "TEST: DELETE ROLE",PHP_EOL;
+checkResult($manager->deleteRole('test'), "Successfully deleted the test role", "Test role deletion failed:");
+
+// TEST: empty role test
+echo "TEST: NO ROLES 2",PHP_EOL;
+checkResult($manager->getAllRoles() == [], "Role driver responded correctly", "Incorrect result from final getAllRoles call");
 
 // TEST: check this user
 echo "TEST: CHECK LOGIN 3",PHP_EOL;
