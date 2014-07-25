@@ -206,8 +206,7 @@ class File extends Base
 		// find the id for this user
 		if ($unifiedId = $this->findUnifiedUser($ids))
 		{
-			// construct the list of lookup keys
-			$keys = array();
+			// and remove any hits
 			foreach ($ids as $driver => $id)
 			{
 				if ($id !== false)
