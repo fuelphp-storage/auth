@@ -12,6 +12,8 @@ namespace Fuel\Auth\Group;
 
 use Fuel\Auth\AuthException;
 
+use Fuel\Common\Arr;
+
 /**
  * File group authentication driver
  *
@@ -165,7 +167,7 @@ class File extends Base
 		{
 			$attributes['name'] = $this->data[$id]['name'];
 		}
-		$this->data[$id] = $attributes;
+		$this->data[$id] = Arr::merge($this->data[$id], $attributes);
 
 		// write the data
 		$this->store();
@@ -216,13 +218,9 @@ class File extends Base
 	public function assignUserToGroup($group, $user = null)
 	{
 		// if we don't have a user, get the logged-in user
-		if ( ! $user)
+		if ( ! $user and ! $user = $this->manager->getUserId())
 		{
-			// check the persistence store to see if this user is stored
-			if ( ! $persistence = $this->manager->getPersistenceDriver() or ! $user = $persistence->get('user'))
-			{
-				throw new AuthException('Unable to assign a group. There is no user logged in.');
-			}
+			throw new AuthException('Unable to assign a group. There is no user logged in.');
 		}
 
 		// get the id of the group we're assiging
@@ -242,18 +240,18 @@ class File extends Base
 	}
 
 	/**
-	 * Return a list of all groups assigned to the current logged-in user
+	 * Return a list of all groups assigned to a user
+	 *
+	 * @param  string  $user   user to assign to. if not given, the current logged-in user will be used
 	 *
 	 * @return  array  assoc array with groupid => name
 	 *
-	 * @throws  AuthException  if there is no user
-	 *
 	 * @since 2.0.0
 	 */
-	public function getAssignedGroups()
+	public function getAssignedGroups($user = null)
 	{
-		// check the persistence store to see if this user is stored
-		if ( ! $persistence = $this->manager->getPersistenceDriver() or ! $user = $persistence->get('user'))
+		// if we don't have a user, get the logged-in user
+		if ( ! $user and ! $user = $this->manager->getUserId())
 		{
 			throw new AuthException('Unable to get the assigned groups. There is no user logged in.');
 		}
@@ -343,13 +341,9 @@ class File extends Base
 	public function isMemberOf($group, $user = null)
 	{
 		// if we don't have a user, get the logged-in user
-		if ( ! $user)
+		if ( ! $user and ! $user = $this->manager->getUserId())
 		{
-			// check the persistence store to see if this user is stored
-			if ( ! $persistence = $this->manager->getPersistenceDriver() or ! $user = $persistence->get('user'))
-			{
-				throw new AuthException('Unable to assign a group. There is no user logged in.');
-			}
+			throw new AuthException('Unable to assign a group. There is no user logged in.');
 		}
 
 		// get the id of the group we're assiging
@@ -390,13 +384,9 @@ class File extends Base
 	public function removeUserFromGroup($group, $user = null)
 	{
 		// if we don't have a user, get the logged-in user
-		if ( ! $user)
+		if ( ! $user and ! $user = $this->manager->getUserId())
 		{
-			// check the persistence store to see if this user is stored
-			if ( ! $persistence = $this->manager->getPersistenceDriver() or ! $user = $persistence->get('user'))
-			{
-				throw new AuthException('Unable to assign a group. There is no user logged in.');
-			}
+			throw new AuthException('Unable to remove a group. There is no user logged in.');
 		}
 
 		// get the id of the group we're assiging
@@ -462,7 +452,31 @@ class File extends Base
 	}
 
 	/**
-	 * Called when a user is deleted, can be used for cleanup purposes
+	 * Called from the Auth manager instance to trigger the driver on
+	 * specific events. It is up to the driver to deal with that trigger
+	 *
+	 * @param  string  named hook trigger
+	 * @param  string  any arguments for the hook method
+	 *
+	 * @return  boolean  true if the call succeeded, false if it didn't
+	 *
+	 * @since 2.0.0
+	 */
+	public function callHook($hook, $args)
+	{
+		// process the hooks
+		switch ($hook)
+		{
+			case 'deleteUser':
+				return $this->deleteUserHook(reset($args));
+		}
+
+		// unknown hook requested
+		return parent::callHook($hook, $args);
+	}
+
+	/**
+	 * Called when a user is deleted, used for cleanup purposes
 	 *
 	 * @param  string  $user  id of the user to be deleted
 	 *
@@ -470,7 +484,7 @@ class File extends Base
 	 *
 	 * @since 2.0.0
 	 */
-	public function deleteUser($id)
+	protected function deleteUserHook($id)
 	{
 		foreach ($this->getAllGroups() as $groupId => $name)
 		{

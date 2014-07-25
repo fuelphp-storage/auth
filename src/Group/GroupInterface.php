@@ -96,13 +96,15 @@ interface GroupInterface extends AuthInterface
 	public function assignGroupToGroup($group, $groupid);
 
 	/**
-	 * Return a list of all groups assigned to the current logged-in user
+	 * Return a list of all groups assigned to a user
+	 *
+	 * @param  string  $user   user to assign to. if not given, the current logged-in user will be used
 	 *
 	 * @return  array  assoc array with groupid => name
 	 *
 	 * @since 2.0.0
 	 */
-	public function getAssignedGroups();
+	public function getAssignedGroups($user = null);
 
 	/**
 	 * Return a list of all groups defined
@@ -175,15 +177,4 @@ interface GroupInterface extends AuthInterface
 	 * @since 2.0.0
 	 */
 	public function removeGroupFromGroup($group, $groupid);
-
-	/**
-	 * Called when a user is deleted, can be used for cleanup purposes
-	 *
-	 * @param  string  $user  id of the user to be deleted
-	 *
-	 * @return  mixed  the id of the account deleted, or false if it failed
-	 *
-	 * @since 2.0.0
-	 */
-	public function deleteUser($id);
 }

@@ -54,21 +54,6 @@ abstract class Base extends Driver implements GroupInterface
 	}
 
 	/**
-	 * Called when a user is deleted, can be used for cleanup purposes
-	 *
-	 * @param  string  $user  id of the user to be deleted
-	 *
-	 * @return  mixed  the id of the account deleted, or false if it failed
-	 *
-	 * @since 2.0.0
-	 */
-	public function deleteUser($id)
-	{
-		// by default, group drivers don't do user cleanup
-		return false;
-	}
-
-	/**
 	 * Assigns a given group to another group (group nesting)
 	 *
 	 * @param  string  $group    id or name of the group to assign. This group must exist
