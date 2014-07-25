@@ -109,15 +109,15 @@ class Null extends Base
 	}
 
 	/**
-	 * Return a list of all roles assigned to the current logged-in user
+	 * Return a list of all roles assigned to a user
+	 *
+	 * @param  string  $user   user to assign to. if not given, the current logged-in user will be used
 	 *
 	 * @return  array  assoc array with roleid => name
 	 *
-	 * @throws  AuthException  if there is no user
-	 *
 	 * @since 2.0.0
 	 */
-	public function getAssignedRoles()
+	public function getAssignedRoles($user = null)
 	{
 		// this is a read-only driver
 		return array();

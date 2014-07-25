@@ -96,13 +96,15 @@ interface RoleInterface extends AuthInterface
 	public function assignRoleToRole($role, $roleid);
 
 	/**
-	 * Return a list of all roles assigned to the current logged-in user
+	 * Return a list of all roles assigned to a user
+	 *
+	 * @param  string  $user   user to assign to. if not given, the current logged-in user will be used
 	 *
 	 * @return  array  assoc array with roleid => name
 	 *
 	 * @since 2.0.0
 	 */
-	public function getAssignedRoles();
+	public function getAssignedRoles($user = null);
 
 	/**
 	 * Return a list of all roles defined
@@ -175,15 +177,4 @@ interface RoleInterface extends AuthInterface
 	 * @since 2.0.0
 	 */
 	public function removeRoleFromRole($role, $roleid);
-
-	/**
-	 * Called when a user is deleted, can be used for cleanup purposes
-	 *
-	 * @param  string  $user  id of the user to be deleted
-	 *
-	 * @return  mixed  the id of the account deleted, or false if it failed
-	 *
-	 * @since 2.0.0
-	 */
-	public function deleteUser($id);
 }

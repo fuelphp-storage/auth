@@ -54,21 +54,6 @@ abstract class Base extends Driver implements RoleInterface
 	}
 
 	/**
-	 * Called when a user is deleted, can be used for cleanup purposes
-	 *
-	 * @param  string  $user  id of the user to be deleted
-	 *
-	 * @return  mixed  the id of the account deleted, or false if it failed
-	 *
-	 * @since 2.0.0
-	 */
-	public function deleteUser($id)
-	{
-		// by default, role drivers don't do user cleanup
-		return false;
-	}
-
-	/**
 	 * Assigns a given role to another role (role nesting)
 	 *
 	 * @param  string  $role     id or name of the role to assign. This role must exist
