@@ -12,8 +12,6 @@ namespace Fuel\Auth\Persistence;
 
 use Fuel\Auth\AuthException;
 
-use Fuel\Common\Arr;
-
 /**
  * Auth Persistence file driver class
  *
@@ -96,7 +94,11 @@ class File extends Base
 	 */
 	public function get($key)
 	{
-		return Arr::get($this->data, $this->prefix($key), null);
+		if (isset($this->data[$this->prefix($key)]))
+		{
+			return $this->data[$this->prefix($key)];
+		}
+		return null;
 	}
 
 	/**
@@ -109,7 +111,7 @@ class File extends Base
 	 */
 	public function set($key, $value)
 	{
-		Arr::set($this->data, $this->prefix($key), $value);
+		$this->data[$this->prefix($key)] = $value;
 	}
 
 	/**
@@ -123,7 +125,8 @@ class File extends Base
 	 */
 	public function delete($key)
 	{
-		return Arr::delete($this->data, $this->prefix($key));
+		unset ($this->data[$this->prefix($key)]);
+		return true;
 	}
 
 	/**
@@ -137,7 +140,7 @@ class File extends Base
 			return '__'.$_SERVER['REMOTE_ADDR'].'__'.$key;
 		}
 
-		return '__127.0.0.1__'.$key;
+		return '__localhost__'.$key;
 	}
 
 	/**
