@@ -60,6 +60,7 @@ abstract class Driver
 	 */
 	public function setManager(Manager $manager)
 	{
+		// store the manager instance
 		$this->manager = $manager;
 	}
 
@@ -115,4 +116,22 @@ abstract class Driver
 	{
 		return $this->hasConcurrency;
 	}
+
+	/**
+	 * Called from the Auth manager instance to trigger the driver on
+	 * specific events. It is up to the driver to deal with that trigger
+	 *
+	 * @param  string  named hook trigger
+	 * @param  string  any arguments for the hook method
+	 *
+	 * @return  boolean  true if the call succeeded, false if it didn't
+	 *
+	 * @since 2.0.0
+	 */
+	public function callHook($hook, $args)
+	{
+		// by default, drivers don't define hooks
+		return false;
+	}
+
 }
