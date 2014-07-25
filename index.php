@@ -36,7 +36,7 @@ $manager = new \Fuel\Auth\Manager(
 $manager->addDriver(new \Fuel\Auth\User\File(['min_password_length' => 6, 'new_password_length' => 8, 'file' => '/tmp']), 'user');
 $manager->addDriver(new \Fuel\Auth\Group\File(['file' => '/tmp']), 'group');
 $manager->addDriver(new \Fuel\Auth\Role\File(['file' => '/tmp']), 'role');
-#$manager->addDriver(new \Fuel\Auth\Acl\Null, 'acl');
+$manager->addDriver(new \Fuel\Auth\Acl\File(['file' => '/tmp']), 'acl');
 
 // TEST: create a user to test with
 echo "TEST: USER CREATE",PHP_EOL;
@@ -151,6 +151,28 @@ checkResult($manager->createRole('test', []), "Successful created test role with
 echo "TEST: ASSIGN ROLE",PHP_EOL;
 checkResult($manager->assignUserToRole('test', $userid), "Successful assigned test role", "Test role assignment failed:");
 
+// TEST: create a permission
+echo "TEST: PERMISSION CREATION",PHP_EOL;
+checkResult($manager->createPermission('module.function.admin', array('create', 'read', 'update', 'delete', 'view')), "Successful created permission", "Permission creation failed:");
+
+// TEST: update a permission
+echo "TEST: PERMISSION UPDATE",PHP_EOL;
+checkResult($manager->updatePermission('module.function.admin', array('create', 'read', 'update', 'delete')), "Successful updated permission", "Permission update failed:");
+
+// TEST: assign a permission to a role
+echo "TEST: INCORRECT PERMISSION ASSIGNMENTS",PHP_EOL;
+checkResult($manager->assignPermissionTo('role', 'test', 'unknown', array('read')), "Incorrect permission assignment failed", "Succesfully captured incorrect permission name:");
+checkResult($manager->assignPermissionTo('role', 'unknown', 'module.function.admin', array('read')), "Incorrect permission assignment failed", "Succesfully captured incorrect role name:");
+checkResult($manager->assignPermissionTo('bicyle', 'test', 'module.function.admin', array('read')), "Incorrect permission assignment failed", "Succesfully captured incorrect type name:");
+checkResult($manager->assignPermissionTo('role', 'test', 'module.function.admin', array('unknown')), "Incorrect permission assignment failed", "Succesfully captured incorrect action list:");
+
+echo "TEST: PERMISSION ASSIGNMENT TO A ROLE",PHP_EOL;
+checkResult($manager->assignPermissionTo('role', 'test', 'module.function.admin', array('read')), "Successful assigned permission", "Permission assignment failed:");
+
+// TEST: assign a permission to a group
+echo "TEST: PERMISSION ASSIGNMENT TO A GROUP",PHP_EOL;
+checkResult($manager->assignPermissionTo('group', 'test', 'module.function.admin', array('read')), "Successful assigned permission", "Permission assignment failed:");
+
 // TEST: delete the test user
 echo "TEST: USER DELETE",PHP_EOL;
 $result = $manager->deleteUser($userid);
@@ -172,6 +194,10 @@ checkResult($manager->deleteRole('test'), "Successfully deleted the test role", 
 echo "TEST: NO ROLES 2",PHP_EOL;
 checkResult($manager->getAllRoles() == [], "Role driver responded correctly", "Incorrect result from final getAllRoles call");
 
+// TEST: delete a permission
+echo "TEST: PERMISSION DELETE",PHP_EOL;
+checkResult($manager->deletePermission('module.function.admin'), "Successful deleted permission", "Permission deletion failed:");
+
 // TEST: check this user
 echo "TEST: CHECK LOGIN 3",PHP_EOL;
-checkResult( ! $manager->check(), "Check succeeded", "Check failed");
+checkResult($manager->check(), "Check failed", "Check succesfully completed");
