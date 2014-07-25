@@ -112,37 +112,6 @@ class File extends Base
 	}
 
 	/**
-	 * Check for a logged-in user. Check uses persistence data to restore
-	 * a logged-in user if needed and supported by the driver
-	 *
-	 * @return  bool  true if there is a logged-in user, false if not
-	 *
-	 * @since 2.0.0
-	 */
-	public function check()
-	{
-		// if we're not already logged in
-		if ( ! $this->isLoggedIn())
-		{
-			// fetch the loaded persistence driver
-			if ($persistence = $this->manager->getPersistenceDriver())
-			{
-				// and check if there was a current user stored
-				if (($this->currentUser = $persistence->get('user')) !== null)
-				{
-					return true;
-				}
-			}
-
-			// no persistence driver, so user to login
-			return false;
-		}
-
-		// already logged in
-		return true;
-	}
-
-	/**
 	 * Create new user
 	 *
 	 * the use of the attributes array will depend on the driver. since drivers
@@ -221,16 +190,7 @@ class File extends Base
 		// delete the user
 		unset($this->data[$id]);
 
-		// check the persistence store to see if this user is stored
-		if ($persistence = $this->manager->getPersistenceDriver())
-		{
-			if ($id == $persistence->get('user'))
-			{
-				$persistence->delete('user');
-			}
-		}
-
-		// if this was the current user, force a logout
+		// if this was the current local user, force a logout
 		if ($id === $this->currentUser)
 		{
 			$this->logout();
@@ -259,11 +219,6 @@ class File extends Base
 		if (isset($this->data[$id]))
 		{
 			$this->currentUser = $this->data[$id]['id'];
-
-			if ($persistence = $this->manager->getPersistenceDriver())
-			{
-				$persistence->set('user', $this->currentUser);
-			}
 			return true;
 		}
 
@@ -396,11 +351,6 @@ class File extends Base
 		if ($id = $this->validate($user, $password))
 		{
 			$this->currentUser = $id;
-
-			if ($persistence = $this->manager->getPersistenceDriver())
-			{
-				$persistence->set('user', $this->currentUser);
-			}
 			return $id;
 		}
 
@@ -427,13 +377,6 @@ class File extends Base
 		{
 			// reset the current user
 			$this->currentUser = $this->hasGuestSupport() ? 0 : null;
-
-			// fetch the loaded persistence driver
-			if ($persistence = $this->manager->getPersistenceDriver())
-			{
-				// remove the stored user from the persistence driver
-				$persistence->delete('user');
-			}
 
 			// user logged out
 			return true;

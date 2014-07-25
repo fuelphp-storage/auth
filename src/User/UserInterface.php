@@ -24,16 +24,6 @@ interface UserInterface extends AuthInterface
 	public function hasGuestSupport();
 
 	/**
-	 * Check for a logged-in user. Check uses persistence data to restore
-	 * a logged-in user if needed and supported by the driver
-	 *
-	 * @return  bool  true if there is a logged-in user, false if not
-	 *
-	 * @since 2.0.0
-	 */
-	public function check();
-
-	/**
 	 * Check if this driver is logged in or not
 	 *
 	 * @return  bool  true if there is a logged-in user, false if not

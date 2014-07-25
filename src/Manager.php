@@ -42,7 +42,7 @@ class Manager
 	/**
 	 * @var  array  loaded auth drivers
 	 */
-	protected $drivers = array();
+	protected $drivers = [];
 
 	/**
 	 * @var  array  supported method list, and a link to the driver that implements it
@@ -120,6 +120,13 @@ class Manager
 				}
 			}
 
+			// call the hooks for this method
+			foreach ($this->drivers as $driver)
+			{
+				$driver->callHook($method, array($this->unifiedUserId));
+			}
+
+			// return the result
 			if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
 			{
 				return reset($result);
@@ -176,6 +183,12 @@ class Manager
 	 */
 	public function addDriver($driver, $name = null)
 	{
+		// make sure we have an instance
+		if ( ! is_object($driver))
+		{
+			throw new AuthException('Driver passed is not an object.');
+		}
+
 		// bail out if it doesn't implement AuthInterface
 		if ( ! $driver instanceOf AuthInterface)
 		{
@@ -207,7 +220,7 @@ class Manager
 					{
 						if ($loadedDriver instanceOf $interface)
 						{
-							throw new AuthException('A driver with interface '.$interface.' is already loaded and multiple drivers of this type are not supported.');
+							throw new AuthException('A driver with interface '.$interface.' is already loaded and '.get_class($driver).' does not support multiple drivers of this type.');
 						}
 					}
 				}
@@ -371,6 +384,33 @@ class Manager
 	}
 
 	/**
+	 * Check for a logged-in user. Check uses persistence data to restore
+	 * a logged-in user if needed and supported by the driver
+	 *
+	 * @return  bool  true if there is a logged-in user, false if not
+	 *
+	 * @since 2.0.0
+	 */
+	public function check()
+	{
+		// if we're not already logged in
+		if ( ! $this->isLoggedIn())
+		{
+			// check if there was a unified user stored in persistent storage
+			if (($this->unifiedUserId = $this->persistence->get('user')) !== null)
+			{
+				return true;
+			}
+
+			// no persistence driver, or no logged-in user stored
+			return false;
+		}
+
+		// already logged in
+		return true;
+	}
+
+	/**
 	 * Login user
 	 *
 	 * @param   string  $user      user identification (name, email, etc...)
@@ -400,6 +440,9 @@ class Manager
 		// restore the return type setting
 		$this->config['always_return_arrays'] = $orgSetting;
 
+		// reset the last error array
+		$this->lastErrors = [];
+
 		// if we have a successful login
 		if ( ! empty(array_filter($result)))
 		{
@@ -425,8 +468,6 @@ class Manager
 			}
 		}
 
-		$this->config['always_return_arrays'] = $orgSetting;
-
 		// determine the unified user id
 		if ( ! $this->unifiedUserId = $storage->findUnifiedUser($result))
 		{
@@ -434,6 +475,10 @@ class Manager
 			$this->unifiedUserId = null;
 		}
 
+		// update the stored user id
+		$this->persistence->set('user', $this->unifiedUserId);
+
+		// return the result
 		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
 		{
 			return reset($result);
@@ -467,11 +512,11 @@ class Manager
 		// storage for the result
 		$result = array();
 
-		// get the list of drivers that has an account for this user
+		// get the list of drivers that have an account for this user
 		if ($accounts = $storage->getUnifiedUsers($id))
 		{
 			// loop over the list
-			foreach($accounts as $driver => $id)
+			foreach($accounts as $driver => $localid)
 			{
 				// if we don't have this driver loaded
 				if ( ! isset($this->drivers[$driver]))
@@ -482,8 +527,24 @@ class Manager
 				else
 				{
 					// attempt a forced login
-					$result[$driver] = $this->drivers[$driver]->forceLogin($id);
+					$result[$driver] = $this->drivers[$driver]->forceLogin($localid);
 				}
+			}
+		}
+
+		// check for a success for at least one driver
+		if (in_array(true, $result))
+		{
+			// mark the id as logged-in
+			$this->unifiedUserId = $id;
+
+			// update the stored user id
+			$this->persistence->set('user', $this->unifiedUserId);
+
+			// call the forceLogin hooks
+			foreach ($this->drivers as $driver)
+			{
+				$driver->callHook('forceLogin', array($this->unifiedUserId));
 			}
 		}
 
@@ -518,10 +579,20 @@ class Manager
 		// check for a success for at least one driver
 		if (in_array(true, $result))
 		{
+			// call the logout hooks
+			foreach ($this->drivers as $driver)
+			{
+				$driver->callHook('logout', array($this->unifiedUserId));
+			}
+
 			// reset the unified user id
 			$this->unifiedUserId = null;
 		}
 
+		// delete the stored user id
+		$this->persistence->delete('user');
+
+		// return the result
 		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
 		{
 			return reset($result);
@@ -549,37 +620,31 @@ class Manager
 			throw new AuthException('No storage driver is defined, can not access global auth information');
 		}
 
+		// some storage for the results
+		$result = [];
+
+		// reset the last error array
+		$this->lastErrors = [];
+
+		// if the user to be deleted is the current logged-in user
+		if ($this->unifiedUserId == $id)
+		{
+			// force a logout first
+			$this->logout();
+		}
+
 		// get the list of drivers that has an account for this user
 		$accounts = $storage->getUnifiedUsers($id);
 
-		// do we have any drivers with this method?
-		if (isset($this->methods['deleteUser']))
+		// and delete them
+		foreach ($accounts as $name => $localid)
 		{
-			// reset the last error array
-			$this->lastErrors = [];
-
-			// some storage for the results
-			$result = [];
-
-			// loop over the defined drivers
-			foreach ($this->methods['deleteUser'] as $name => $driver)
+			if (isset($this->drivers[$name]))
 			{
 				// call the driver method
 				try
 				{
-					// determine the argument
-					if (isset($accounts[$name]))
-					{
-						// drivers local user id
-						$user = $accounts[$name];
-					}
-					else
-					{
-						// use the unified id
-						$user = $id;
-					}
-
-					$result[$name] = $driver->deleteUser($user);
+					$result[$name] = $this->drivers[$name]->deleteUser($localid);
 				}
 				catch (AuthException $e)
 				{
@@ -590,23 +655,23 @@ class Manager
 					$result[$name] = false;
 				}
 			}
-
-			// delete the unified user information
-			$id = $storage->deleteUnifiedUser($result);
-			if ($this->unifiedUserId === $id)
-			{
-				// delete of the logged-in user, force a logout
-				$this->unifiedUserId = null;
-			}
-
-			if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
-			{
-				return reset($result);
-			}
-
-			return $result;
 		}
 
-		return false;
+		// delete the unified user information
+		$id = $storage->deleteUnifiedUser($result);
+
+		// call the deleteUser hooks
+		foreach ($this->drivers as $driver)
+		{
+			$driver->callHook('deleteUser', array($id));
+		}
+
+		// return the result
+		if ($this->getConfig('always_return_arrays', true) === false and count($result) === 1)
+		{
+			return reset($result);
+		}
+
+		return $result;
 	}
 }
